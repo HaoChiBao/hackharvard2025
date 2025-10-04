@@ -1,7 +1,7 @@
 const express = require('express');
 const Joi = require('joi');
 const crypto = require('crypto');
-const cookieStorage = require('../storage/cookieStorage');
+const localStorage = require('../storage/localStorage');
 
 const router = express.Router();
 
@@ -34,15 +34,7 @@ router.post('/register', async (req, res) => {
     const { name, email, website, webhookUrl, description } = value;
 
     // Check if merchant already exists
-    const existingMerchant = Object.values(req.cookies)
-      .find(cookie => {
-        try {
-          const data = JSON.parse(cookie);
-          return data.email === email;
-        } catch {
-          return false;
-        }
-      });
+    const existingMerchant = localStorage.getMerchantByEmail(email);
 
     if (existingMerchant) {
       return res.status(409).json({
@@ -65,9 +57,9 @@ router.post('/register', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    // Store in cookies
-    cookieStorage.setMerchant(res, merchantId, merchant);
-    cookieStorage.setApiKey(res, apiKey, merchantId);
+    // Store in local storage
+    localStorage.setMerchant(res, merchantId, merchant);
+    localStorage.setApiKey(res, apiKey, merchantId);
 
     res.json({
       success: true,
@@ -103,15 +95,7 @@ router.post('/login', async (req, res) => {
     const { email, password } = value;
 
     // Find merchant by email
-    const merchant = Object.values(req.cookies)
-      .find(cookie => {
-        try {
-          const data = JSON.parse(cookie);
-          return data.email === email;
-        } catch {
-          return false;
-        }
-      });
+    const merchant = localStorage.getMerchantByEmail(email);
 
     if (!merchant) {
       return res.status(401).json({
@@ -131,7 +115,7 @@ router.post('/login', async (req, res) => {
 
     // Generate new API key
     const apiKey = `sk_${crypto.randomBytes(32).toString('hex')}`;
-    cookieStorage.setApiKey(res, apiKey, merchant.id);
+    localStorage.setApiKey(res, apiKey, merchant.id);
 
     res.json({
       success: true,
@@ -163,7 +147,7 @@ router.get('/profile', async (req, res) => {
       });
     }
 
-    const merchant = cookieStorage.getMerchantByApiKey(req, apiKey);
+    const merchant = localStorage.getMerchantByApiKey(req, apiKey);
     if (!merchant) {
       return res.status(401).json({
         error: 'Authentication failed',
@@ -188,7 +172,7 @@ router.get('/profile', async (req, res) => {
 // GET /api/merchants/data (for debugging)
 router.get('/data', async (req, res) => {
   try {
-    const data = cookieStorage.getAllData(req);
+    const data = localStorage.getAllData(req);
     res.json({
       success: true,
       data: data
@@ -205,7 +189,7 @@ router.get('/data', async (req, res) => {
 // POST /api/merchants/clear (for debugging)
 router.post('/clear', async (req, res) => {
   try {
-    cookieStorage.clearAllData(res);
+    localStorage.clearAllData(res);
     res.json({
       success: true,
       message: 'All data cleared'
