@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visa Fraud Detection Demo - Real-Time Analysis</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #1e3c72;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        .checkout-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .analysis-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .btn {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn:hover {
+            background: #2a5298;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .real-time-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #28a745;
+        }
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+        .risk-low { border-left: 4px solid #28a745; }
+        .risk-medium { border-left: 4px solid #ffc107; }
+        .risk-high { border-left: 4px solid #fd7e14; }
+        .risk-critical { border-left: 4px solid #dc3545; }
+        .risk-score {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .behavior-tracker {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .location-tracker {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .device-tracker {
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .baseline-comparison {
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .alert {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .alert.show {
+            display: block;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .metric-value {
+            font-weight: bold;
+        }
+        .metric-normal { color: #28a745; }
+        .metric-suspicious { color: #ffc107; }
+        .metric-dangerous { color: #dc3545; }
+        .demo-instructions {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .scenario-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .scenario-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .scenario-btn.normal { background: #28a745; color: white; }
+        .scenario-btn.suspicious { background: #ffc107; color: #333; }
+        .scenario-btn.fraudulent { background: #dc3545; color: white; }
+        .scenario-btn.active { box-shadow: 0 0 0 2px #007bff; }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1e3c72;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 Real-Time Fraud Detection Demo</h1>
+            <p>See how your behavior, location, and device are analyzed in real-time</p>
+        </div>
+        
+        <div class="main-content">
+            <!-- Checkout Section -->
+            <div class="checkout-section">
+                <div class="demo-instructions">
+                    <h3>🎯 Demo Instructions</h3>
+                    <p><strong>Try different scenarios:</strong></p>
+                    <ul>
+                        <li><strong>Normal:</strong> Act like a regular customer</li>
+                        <li><strong>Suspicious:</strong> Click fast, type quickly, minimal scrolling</li>
+                        <li><strong>Fraudulent:</strong> Act like a bot - very fast, no mouse movement</li>
+                    </ul>
+                </div>
+                
+                <div class="scenario-buttons">
+                    <button class="scenario-btn normal active" id="normalBtn">✅ Normal Customer</button>
+                    <button class="scenario-btn suspicious" id="suspiciousBtn">⚠️ Suspicious Activity</button>
+                    <button class="scenario-btn fraudulent" id="fraudulentBtn">🚨 Fraudulent Behavior</button>
+                </div>
+                
+                <form id="checkoutForm">
+                    <div class="form-group">
+                        <label>Amount ($)</label>
+                        <input type="number" id="amount" value="99.99" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Customer Email</label>
+                        <input type="email" id="customerEmail" value="customer@example.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Card Number</label>
+                        <input type="text" id="cardNumber" value="4242 4242 4242 4242" placeholder="1234 5678 9012 3456">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>CVV</label>
+                        <input type="text" id="cvv" value="123" placeholder="123">
+                    </div>
+                    
+                    <button type="submit" class="btn" id="submitBtn">
+                        🔍 Analyze Transaction
+                    </button>
+                </form>
+                
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Analyzing transaction...</p>
+                </div>
+                
+                <div id="status" class="status hidden"></div>
+            </div>
+            
+            <!-- Real-Time Analysis Section -->
+            <div class="analysis-section">
+                <h3>📊 Real-Time Analysis</h3>
+                
+                <!-- Current Behavior Tracker -->
+                <div class="behavior-tracker">
+                    <h4>🎭 Your Current Behavior</h4>
+                    <div class="metric">
+                        <span>Clicks:</span>
+                        <span class="metric-value" id="currentClicks">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Keystrokes:</span>
+                        <span class="metric-value" id="currentKeystrokes">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Scrolls:</span>
+                        <span class="metric-value" id="currentScrolls">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Mouse Movements:</span>
+                        <span class="metric-value" id="currentMouseMovements">0</span>
+                    </div>
+                    <div class="metric">
+                        <span>Actions/Min:</span>
+                        <span class="metric-value" id="currentActionsPerMinute">0</span>
+                    </div>
+                </div>
+                
+                <!-- Location Tracker -->
+                <div class="location-tracker">
+                    <h4>📍 Location Analysis</h4>
+                    <div class="metric">
+                        <span>Location:</span>
+                        <span class="metric-value" id="currentLocation">Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span>Accuracy:</span>
+                        <span class="metric-value" id="locationAccuracy">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>Risk Level:</span>
+                        <span class="metric-value" id="locationRisk">-</span>
+                    </div>
+                </div>
+                
+                <!-- Device Tracker -->
+                <div class="device-tracker">
+                    <h4>💻 Device Analysis</h4>
+                    <div class="metric">
+                        <span>Browser:</span>
+                        <span class="metric-value" id="currentBrowser">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>Screen:</span>
+                        <span class="metric-value" id="currentScreen">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>Platform:</span>
+                        <span class="metric-value" id="currentPlatform">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>WebDriver:</span>
+                        <span class="metric-value" id="webDriverStatus">-</span>
+                    </div>
+                    <div class="metric">
+                        <span>Risk Level:</span>
+                        <span class="metric-value" id="deviceRisk">-</span>
+                    </div>
+                </div>
+                
+                <!-- Baseline Comparison -->
+                <div class="baseline-comparison">
+                    <h4>📈 Baseline Comparison</h4>
+                    <div class="metric">
+                        <span>Normal Clicks/Min:</span>
+                        <span class="metric-value metric-normal">5-15</span>
+                    </div>
+                    <div class="metric">
+                        <span>Normal Keystrokes/Min:</span>
+                        <span class="metric-value metric-normal">10-30</span>
+                    </div>
+                    <div class="metric">
+                        <span>Normal Scrolls/Min:</span>
+                        <span class="metric-value metric-normal">2-8</span>
+                    </div>
+                    <div class="metric">
+                        <span>Normal Mouse Moves/Min:</span>
+                        <span class="metric-value metric-normal">20-100</span>
+                    </div>
+                </div>
+                
+                <!-- Risk Assessment -->
+                <div class="real-time-panel" id="riskPanel">
+                    <h4>🚨 Current Risk Assessment</h4>
+                    <div class="risk-score" id="currentRiskScore">0% Risk</div>
+                    <div id="riskFactors"></div>
+                </div>
+                
+                <!-- Alerts -->
+                <div class="alert" id="fraudAlert">
+                    <strong>🚨 FRAUD ALERT!</strong><br>
+                    Your behavior patterns indicate potential fraud. Additional verification required.
+                </div>
+                
+                <div class="alert" id="suspiciousAlert">
+                    <strong>⚠️ SUSPICIOUS ACTIVITY</strong><br>
+                    Unusual behavior detected. Please verify your identity.
+                </div>
+                
+                <!-- Results -->
+                <div id="results" class="results" style="display: none;">
+                    <h3>Final Analysis Results</h3>
+                    <div id="riskScore" class="risk-score"></div>
+                    <div id="riskDetails"></div>
+                    <div id="recommendations"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let apiKey = null;
+        let merchantId = null;
+        let currentScenario = 'normal';
+        let currentLocation = null;
+        let currentDevice = null;
+        
+        // Behavior tracking
+        let behaviorData = {
+            clicks: 0,
+            keystrokes: 0,
+            scrolls: 0,
+            mouseMovements: 0,
+            sessionStart: Date.now()
+        };
+        
+        // Track user behavior
+        document.addEventListener('click', () => {
+            behaviorData.clicks++;
+            updateRealTimeDisplay();
+        });
+        
+        document.addEventListener('keydown', () => {
+            behaviorData.keystrokes++;
+            updateRealTimeDisplay();
+        });
+        
+        window.addEventListener('scroll', () => {
+            behaviorData.scrolls++;
+            updateRealTimeDisplay();
+        });
+        
+        document.addEventListener('mousemove', () => {
+            behaviorData.mouseMovements++;
+            updateRealTimeDisplay();
+        });
+        
+        // Initialize location and device data
+        async function initializeLocationAndDevice() {
+            // Get location
+            currentLocation = await getLocationData();
+            updateLocationDisplay();
+            
+            // Get device info
+            currentDevice = collectDeviceFingerprint();
+            updateDeviceDisplay();
+        }
+        
+        // Update location display
+        function updateLocationDisplay() {
+            if (currentLocation) {
+                const locationText = `${currentLocation.latitude.toFixed(4)}, ${currentLocation.longitude.toFixed(4)}`;
+                document.getElementById('currentLocation').textContent = locationText;
+                document.getElementById('locationAccuracy').textContent = `${currentLocation.accuracy}m`;
+                
+                // Assess location risk
+                const locationRisk = assessLocationRisk(currentLocation);
+                document.getElementById('locationRisk').textContent = locationRisk.level;
+                document.getElementById('locationRisk').className = `metric-value metric-${locationRisk.class}`;
+            } else {
+                document.getElementById('currentLocation').textContent = 'Location denied';
+                document.getElementById('locationAccuracy').textContent = 'N/A';
+                document.getElementById('locationRisk').textContent = 'Unknown';
+                document.getElementById('locationRisk').className = 'metric-value metric-suspicious';
+            }
+        }
+        
+        // Update device display
+        function updateDeviceDisplay() {
+            if (currentDevice) {
+                // Extract browser name from user agent
+                const browserName = getBrowserName(currentDevice.userAgent);
+                document.getElementById('currentBrowser').textContent = browserName;
+                document.getElementById('currentScreen').textContent = currentDevice.screenResolution;
+                document.getElementById('currentPlatform').textContent = currentDevice.platform;
+                document.getElementById('webDriverStatus').textContent = currentDevice.webdriver ? 'Detected' : 'Not Detected';
+                
+                // Assess device risk
+                const deviceRisk = assessDeviceRisk(currentDevice);
+                document.getElementById('deviceRisk').textContent = deviceRisk.level;
+                document.getElementById('deviceRisk').className = `metric-value metric-${deviceRisk.class}`;
+            }
+        }
+        
+        // Assess location risk
+        function assessLocationRisk(location) {
+            if (!location) {
+                return { level: 'Unknown', class: 'suspicious' };
+            }
+            
+            let risk = 0;
+            let flags = [];
+            
+            // Check accuracy
+            if (location.accuracy > 1000) {
+                risk += 0.2;
+                flags.push('low_accuracy');
+            }
+            
+            // Check for suspicious coordinates (simplified)
+            if (location.latitude === 0 && location.longitude === 0) {
+                risk += 0.5;
+                flags.push('suspicious_coordinates');
+            }
+            
+            // Check for high-risk countries (simplified)
+            if (isHighRiskCountry(location.latitude, location.longitude)) {
+                risk += 0.3;
+                flags.push('high_risk_country');
+            }
+            
+            if (risk < 0.2) return { level: 'Low', class: 'normal' };
+            if (risk < 0.5) return { level: 'Medium', class: 'suspicious' };
+            return { level: 'High', class: 'dangerous' };
+        }
+        
+        // Assess device risk
+        function assessDeviceRisk(device) {
+            let risk = 0;
+            let flags = [];
+            
+            // Check for headless browser
+            if (device.webdriver) {
+                risk += 0.5;
+                flags.push('webdriver_detected');
+            }
+            
+            // Check for suspicious user agent
+            if (device.userAgent.includes('HeadlessChrome') || 
+                device.userAgent.includes('PhantomJS') ||
+                device.userAgent.includes('Selenium')) {
+                risk += 0.4;
+                flags.push('headless_browser');
+            }
+            
+            // Check for missing device info
+            if (!device.screenResolution || device.screenResolution === '0x0') {
+                risk += 0.3;
+                flags.push('missing_screen_info');
+            }
+            
+            if (risk < 0.2) return { level: 'Low', class: 'normal' };
+            if (risk < 0.5) return { level: 'Medium', class: 'suspicious' };
+            return { level: 'High', class: 'dangerous' };
+        }
+        
+        // Get browser name from user agent
+        function getBrowserName(userAgent) {
+            if (userAgent.includes('Chrome')) return 'Chrome';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari')) return 'Safari';
+            if (userAgent.includes('Edge')) return 'Edge';
+            return 'Unknown';
+        }
+        
+        // Check if location is in high-risk country (simplified)
+        function isHighRiskCountry(lat, lng) {
+            // Simplified check - in production, use proper geolocation database
+            const highRiskCountries = [
+                { lat: 35.8617, lng: 104.1954, radius: 1000 }, // China
+                { lat: 55.7558, lng: 37.6176, radius: 1000 }, // Russia
+                { lat: 20.5937, lng: 78.9629, radius: 1000 }  // India
+            ];
+            
+            return highRiskCountries.some(country => 
+                calculateDistance(lat, lng, country.lat, country.lng) < country.radius
+            );
+        }
+        
+        // Calculate distance between two points
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // Update real-time display
+        function updateRealTimeDisplay() {
+            const sessionDuration = Date.now() - behaviorData.sessionStart;
+            const actionsPerMinute = (behaviorData.clicks + behaviorData.keystrokes) / (sessionDuration / 60000);
+            
+            // Update current behavior display
+            document.getElementById('currentClicks').textContent = behaviorData.clicks;
+            document.getElementById('currentKeystrokes').textContent = behaviorData.keystrokes;
+            document.getElementById('currentScrolls').textContent = behaviorData.scrolls;
+            document.getElementById('currentMouseMovements').textContent = behaviorData.mouseMovements;
+            document.getElementById('currentActionsPerMinute').textContent = Math.round(actionsPerMinute);
+            
+            // Calculate real-time risk
+            const riskAssessment = calculateRealTimeRisk(actionsPerMinute);
+            updateRiskDisplay(riskAssessment);
+        }
+        
+        // Calculate real-time risk based on behavior
+        function calculateRealTimeRisk(actionsPerMinute) {
+            // If we have a forced risk score, use it
+            if (window.forcedRiskScore !== undefined && window.forcedRiskScore !== null) {
+                const riskScore = window.forcedRiskScore;
+                const flags = [];
+                
+                // Add appropriate flags based on risk level
+                if (riskScore >= 0.8) {
+                    flags.push('high_risk_scenario', 'fraudulent_behavior');
+                } else if (riskScore >= 0.5) {
+                    flags.push('medium_risk_scenario', 'suspicious_activity');
+                } else {
+                    flags.push('low_risk_scenario', 'normal_behavior');
+                }
+                
+                return {
+                    score: riskScore,
+                    flags: flags,
+                    level: getRiskLevel(riskScore)
+                };
+            }
+            
+            // Original risk calculation for normal mode (real-time assessment)
+            let riskScore = 0;
+            let flags = [];
+            
+            // Check against baseline
+            if (actionsPerMinute > 50) {
+                riskScore += 0.4;
+                flags.push('too_fast');
+            } else if (actionsPerMinute < 2) {
+                riskScore += 0.3;
+                flags.push('too_slow');
+            }
+            
+            if (behaviorData.clicks === 0 && behaviorData.keystrokes === 0) {
+                riskScore += 0.5;
+                flags.push('no_interaction');
+            }
+            
+            if (behaviorData.mouseMovements === 0) {
+                riskScore += 0.2;
+                flags.push('no_mouse_movement');
+            }
+            
+            // Add location risk
+            if (currentLocation) {
+                const locationRisk = assessLocationRisk(currentLocation);
+                if (locationRisk.class === 'dangerous') riskScore += 0.3;
+                else if (locationRisk.class === 'suspicious') riskScore += 0.1;
+            }
+            
+            // Add device risk
+            if (currentDevice) {
+                const deviceRisk = assessDeviceRisk(currentDevice);
+                if (deviceRisk.class === 'dangerous') riskScore += 0.3;
+                else if (deviceRisk.class === 'suspicious') riskScore += 0.1;
+            }
+            
+            return {
+                score: Math.min(riskScore, 1.0),
+                flags: flags,
+                level: getRiskLevel(riskScore)
+            };
+        }
+        
+        function getRiskLevel(score) {
+            if (score < 0.3) return 'LOW';
+            if (score < 0.6) return 'MEDIUM';
+            if (score < 0.8) return 'HIGH';
+            return 'CRITICAL';
+        }
+        
+        function updateRiskDisplay(assessment) {
+            const riskPanel = document.getElementById('riskPanel');
+            const riskScore = document.getElementById('currentRiskScore');
+            const riskFactors = document.getElementById('riskFactors');
+            const fraudAlert = document.getElementById('fraudAlert');
+            const suspiciousAlert = document.getElementById('suspiciousAlert');
+            
+            // Update risk score
+            const percentage = Math.round(assessment.score * 100);
+            riskScore.textContent = `${percentage}% Risk (${assessment.level})`;
+            
+            // Update risk panel color
+            riskPanel.className = `real-time-panel risk-${assessment.level.toLowerCase()}`;
+            
+            // Update risk factors
+            if (assessment.flags.length > 0) {
+                riskFactors.innerHTML = `
+                    <div style="margin-top: 10px;">
+                        <strong>Flags:</strong> ${assessment.flags.join(', ')}
+                    </div>
+                `;
+            } else {
+                riskFactors.innerHTML = '<div style="margin-top: 10px; color: #28a745;">✅ Normal behavior detected</div>';
+            }
+            
+            // Show alerts
+            if (assessment.level === 'CRITICAL') {
+                fraudAlert.classList.add('show');
+                suspiciousAlert.classList.remove('show');
+            } else if (assessment.level === 'HIGH') {
+                fraudAlert.classList.remove('show');
+                suspiciousAlert.classList.add('show');
+            } else {
+                fraudAlert.classList.remove('show');
+                suspiciousAlert.classList.remove('show');
+            }
+        }
+        
+        // Scenario handling
+        function loadScenario(type) {
+            currentScenario = type;
+            
+            // Update button states
+            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`${type}Btn`).classList.add('active');
+            
+            // Update form data
+            const scenarios = {
+                normal: {
+                    amount: 99.99,
+                    customerEmail: 'john.doe@example.com',
+                    cardNumber: '4242 4242 4242 4242',
+                    cvv: '123',
+                    forcedRiskScore: null // No forced score - use real-time assessment
+                },
+                suspicious: {
+                    amount: 2500.00,
+                    customerEmail: 'test@temp-mail.com',
+                    cardNumber: '4242 4242 4242 4242',
+                    cvv: '123',
+                    forcedRiskScore: 0.5 // 50% - Medium risk (triggers email verification)
+                },
+                fraudulent: {
+                    amount: 10000.00,
+                    customerEmail: 'fraud@fake.com',
+                    cardNumber: '4242 4242 4242 4242',
+                    cvv: '123',
+                    forcedRiskScore: 0.8 // 80% - High risk (triggers email verification)
+                }
+            };
+            
+            const scenario = scenarios[type];
+            document.getElementById('amount').value = scenario.amount;
+            document.getElementById('customerEmail').value = scenario.customerEmail;
+            document.getElementById('cardNumber').value = scenario.cardNumber;
+            document.getElementById('cvv').value = scenario.cvv;
+            
+            // Store the forced risk score
+            window.forcedRiskScore = scenario.forcedRiskScore;
+            
+            // Reset behavior tracking
+            behaviorData = {
+                clicks: 0,
+                keystrokes: 0,
+                scrolls: 0,
+                mouseMovements: 0,
+                sessionStart: Date.now()
+            };
+            
+            // Update the demo instructions to show what will happen
+            updateDemoInstructions(type, scenario.forcedRiskScore);
+            
+            updateRealTimeDisplay();
+        }
+        
+        // Update demo instructions based on scenario
+        function updateDemoInstructions(type, forcedRiskScore) {
+            const instructions = document.querySelector('.demo-instructions');
+            
+            let instructionText = '';
+            
+            if (type === 'normal') {
+                instructionText = `
+                    <h3>🎯 Normal Customer (Real-Time Assessment)</h3>
+                    <p><strong>Expected behavior:</strong> Risk score based on your actual behavior, location, and device</p>
+                    <p><strong>Risk level:</strong> Calculated in real-time as you interact</p>
+                    <p><strong>Note:</strong> If risk > 50%, email verification will be required</p>
+                `;
+            } else if (type === 'suspicious') {
+                instructionText = `
+                    <h3>🎯 Suspicious Activity (50% Risk - Forced)</h3>
+                    <p><strong>Expected behavior:</strong> Email verification will be required</p>
+                    <p><strong>Risk level:</strong> Medium - Additional verification needed</p>
+                    <p><strong>Threshold:</strong> Risk > 50% triggers email verification</p>
+                `;
+            } else if (type === 'fraudulent') {
+                instructionText = `
+                    <h3>🎯 Fraudulent Behavior (80% Risk - Forced)</h3>
+                    <p><strong>Expected behavior:</strong> Email verification will be required</p>
+                    <p><strong>Risk level:</strong> High - Additional verification needed</p>
+                    <p><strong>Threshold:</strong> Risk > 50% triggers email verification</p>
+                `;
+            }
+            
+            instructions.innerHTML = instructionText;
+        }
+        
+        // Initialize demo
+        async function initializeDemo() {
+            try {
+                const timestamp = Date.now();
+                const merchantData = {
+                    name: 'Demo Store',
+                    email: `demo-${timestamp}@example.com`,
+                    website: 'https://demo-store.com',
+                    webhookUrl: 'https://demo-store.com/webhooks',
+                    description: 'Demo merchant for fraud detection testing'
+                };
+                
+                const response = await fetch(`${API_BASE}/api/merchants/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(merchantData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    apiKey = result.data.apiKey;
+                    merchantId = result.data.merchantId;
+                    console.log('Demo initialized successfully');
+                } else {
+                    throw new Error('Failed to initialize demo');
+                }
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+            }
+        }
+        
+        // Add email verification modal styles
+        const emailVerificationStyles = `
+<style>
+.email-verification-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.email-verification-content {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.email-verification-content h3 {
+  margin-top: 0;
+  color: #1e3c72;
+}
+
+.email-verification-content p {
+  margin: 10px 0;
+}
+
+.verification-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+  margin: 10px 0;
+}
+
+.verification-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.verification-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.verify-btn {
+  background: #1e3c72;
+  color: white;
+}
+
+.verify-btn:hover {
+  background: #2a5298;
+}
+
+.cancel-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #5a6268;
+}
+
+.verification-status {
+  margin-top: 15px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.verification-success {
+  color: #28a745;
+}
+
+.verification-error {
+  color: #dc3545;
+}
+
+.verification-info {
+  color: #17a2b8;
+}
+
+.demo-code-display {
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  padding: 15px;
+  border-radius: 5px;
+  text-align: center;
+  margin: 15px 0;
+}
+
+.demo-code-display .code {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e3c72;
+  letter-spacing: 3px;
+}
+
+.demo-code-display .note {
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 5px;
+}
+</style>
+`;
+
+        // Add the styles to the page
+        document.head.insertAdjacentHTML('beforeend', emailVerificationStyles);
+
+        // Email verification functions
+        function showEmailVerificationModal(transactionId, email, verificationCode) {
+          const modal = document.createElement('div');
+          modal.id = 'emailVerificationModal';
+          modal.className = 'email-verification-modal';
+          
+          modal.innerHTML = `
+            <div class="email-verification-content">
+              <h3>📧 Email Verification Required</h3>
+              <p>Due to high risk score, we need to verify your email address.</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p>Please check your email for a 6-digit verification code.</p>
+              
+              <div class="demo-code-display">
+                <div class="code">${verificationCode}</div>
+                <div class="note">Demo: This code is displayed for testing purposes</div>
+              </div>
+              
+              <div>
+                <label>Verification Code:</label>
+                <input type="text" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6" class="verification-input">
+              </div>
+              
+              <div class="verification-buttons">
+                <button id="verifyBtn" class="verification-btn verify-btn">Verify</button>
+                <button id="cancelBtn" class="verification-btn cancel-btn">Cancel</button>
+              </div>
+              
+              <div id="verificationStatus" class="verification-status"></div>
+                    </div>
+                `;
+          
+          document.body.appendChild(modal);
+          
+          // Focus on input
+          document.getElementById('verificationCode').focus();
+          
+          // Add event listeners
+          document.getElementById('verifyBtn').addEventListener('click', () => {
+            const code = document.getElementById('verificationCode').value;
+            verifyEmailCode(transactionId, code);
+          });
+          
+          document.getElementById('cancelBtn').addEventListener('click', () => {
+            closeEmailVerificationModal();
+          });
+          
+          // Close on escape key
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              closeEmailVerificationModal();
+            }
+          });
+          
+          // Auto-fill code for demo
+          document.getElementById('verificationCode').value = verificationCode;
+        }
+
+        function closeEmailVerificationModal() {
+          const modal = document.getElementById('emailVerificationModal');
+          if (modal) {
+            document.body.removeChild(modal);
+          }
+        }
+
+        // Verify email code
+        async function verifyEmailCode(transactionId, code) {
+          const statusDiv = document.getElementById('verificationStatus');
+          const verifyBtn = document.getElementById('verifyBtn');
+          
+          // Show loading state
+          verifyBtn.disabled = true;
+          verifyBtn.textContent = 'Verifying...';
+          statusDiv.innerHTML = '<div class="verification-info">Verifying code...</div>';
+          
+          try {
+            const response = await fetch(`${API_BASE}/api/email-verification/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code, transactionId })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              statusDiv.innerHTML = '<div class="verification-success">✅ Email verified successfully!</div>';
+              
+              // Show success for 2 seconds, then close modal and continue
+              setTimeout(() => {
+                closeEmailVerificationModal();
+                processVerifiedTransaction(transactionId);
+              }, 2000);
+            } else {
+              statusDiv.innerHTML = `<div class="verification-error">❌ ${result.error}</div>`;
+              verifyBtn.disabled = false;
+              verifyBtn.textContent = 'Verify';
+            }
+          } catch (error) {
+            statusDiv.innerHTML = '<div class="verification-error">❌ Verification failed. Please try again.</div>';
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Verify';
+          }
+        }
+
+        // Process verified transaction
+        async function processVerifiedTransaction(transactionId) {
+          console.log('Transaction verified, processing...');
+          
+          // Show success message
+          showStatus('✅ Transaction verified and processed successfully!', 'success');
+          
+          // In a real application, you would:
+          // 1. Process the payment
+          // 2. Send confirmation email
+          // 3. Update order status
+          // 4. Redirect to success page
+        }
+
+        // Add missing showStatus function
+        function showStatus(message, type) {
+          const status = document.getElementById('status');
+          if (status) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.classList.remove('hidden');
+          } else {
+            console.log(`Status (${type}): ${message}`);
+          }
+        }
+
+        // Update the form submission to ensure predicted risk = final analyzed risk
+        document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          if (!apiKey) {
+            alert('Demo not initialized. Please refresh the page.');
+            return;
+          }
+          
+          const submitBtn = document.getElementById('submitBtn');
+          const loading = document.getElementById('loading');
+          const results = document.getElementById('results');
+          
+          submitBtn.disabled = true;
+          loading.classList.remove('hidden');
+          results.style.display = 'none';
+          
+          try {
+            const amount = parseFloat(document.getElementById('amount').value);
+            const customerEmail = document.getElementById('customerEmail').value;
+            
+            // Ensure we have all required data with proper fallbacks
+            const deviceFingerprint = currentDevice || collectDeviceFingerprint();
+            const locationData = currentLocation || await getLocationData();
+            const behaviorData = calculateBehaviorData();
+            const networkData = collectNetworkData();
+            
+            // Validate required fields
+            if (!deviceFingerprint.userAgent) {
+              deviceFingerprint.userAgent = navigator.userAgent || 'Unknown';
+            }
+            if (!deviceFingerprint.screenResolution) {
+              deviceFingerprint.screenResolution = `${screen.width || 1920}x${screen.height || 1080}`;
+            }
+            if (!deviceFingerprint.timezone) {
+              deviceFingerprint.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            }
+            if (!deviceFingerprint.language) {
+              deviceFingerprint.language = navigator.language || 'en-US';
+            }
+            if (!deviceFingerprint.platform) {
+              deviceFingerprint.platform = navigator.platform || 'Unknown';
+            }
+            
+            const transactionData = {
+              amount: amount,
+              currency: 'USD',
+              customerId: customerEmail,
+              merchantId: merchantId,
+              deviceFingerprint: deviceFingerprint,
+              locationData: locationData,
+              behaviorData: behaviorData,
+              networkData: networkData
+            };
+            
+            // If we have a forced risk score, add it to the transaction data
+            if (window.forcedRiskScore !== undefined && window.forcedRiskScore !== null) {
+              transactionData.forcedRiskScore = window.forcedRiskScore;
+              transactionData.scenario = currentScenario;
+            }
+            
+            console.log('Sending transaction data:', transactionData);
+            
+            const response = await fetch(`${API_BASE}/api/fraud/analyze`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey
+              },
+              body: JSON.stringify(transactionData)
+            });
+            
+            const result = await response.json();
+            console.log('API response:', result);
+            
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${result.error || 'Request failed'}. Details: ${result.details ? result.details.join(', ') : 'No details available'}`);
+            }
+            
+            if (result.success) {
+              // Check if email verification is required (risk score > 50%)
+              if (result.data.riskScore > 0.5) {
+                // Send verification email
+                const emailResponse = await fetch(`${API_BASE}/api/email-verification/send`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: customerEmail,
+                    transactionId: result.data.transactionId,
+                    riskScore: result.data.riskScore
+                  })
+                });
+                
+                const emailResult = await emailResponse.json();
+                
+                if (emailResult.success) {
+                  // Show verification modal with the code for demo
+                  showEmailVerificationModal(
+                    result.data.transactionId, 
+                    customerEmail, 
+                    emailResult.code
+                  );
+                } else {
+                  throw new Error('Failed to send verification email');
+                }
+              } else {
+                // Low risk, show results directly
+                displayResults(result.data);
+              }
+            } else {
+              throw new Error(result.error || 'Analysis failed');
+            }
+            
+          } catch (error) {
+            console.error('Error:', error);
+            showStatus('❌ Error analyzing transaction: ' + error.message, 'error');
+          } finally {
+            submitBtn.disabled = false;
+            loading.classList.add('hidden');
+          }
+        });
+        
+        // Helper functions
+        function collectDeviceFingerprint() {
+            return {
+                userAgent: navigator.userAgent || 'Unknown',
+                screenResolution: `${screen.width || 1920}x${screen.height || 1080}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+                language: navigator.language || 'en-US',
+                platform: navigator.platform || 'Unknown',
+                webglVendor: getWebGLVendor(),
+                webglRenderer: getWebGLRenderer(),
+                canvasFingerprint: getCanvasFingerprint(),
+                webdriver: !!navigator.webdriver
+            };
+        }
+        
+        function getWebGLVendor() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) return 'unknown';
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                return gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+            } catch (e) {
+                return 'unknown';
+            }
+        }
+        
+        function getWebGLRenderer() {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) return 'unknown';
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                return gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+            } catch (e) {
+                return 'unknown';
+            }
+        }
+        
+        function getCanvasFingerprint() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('Canvas fingerprint', 2, 2);
+                return canvas.toDataURL();
+            } catch (e) {
+                return 'unknown';
+            }
+        }
+        
+        function getLocationData() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve({
+                        latitude: 40.7128,
+                        longitude: -74.0060,
+                        accuracy: 100,
+                        timestamp: new Date().toISOString()
+                    });
+                    return;
+                }
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy,
+                            timestamp: new Date(position.timestamp).toISOString()
+                        });
+                    },
+                    () => {
+                        resolve({
+                            latitude: 40.7128,
+                            longitude: -74.0060,
+                            accuracy: 100,
+                            timestamp: new Date().toISOString()
+                        });
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+                );
+            });
+        }
+        
+        function calculateBehaviorData() {
+            const sessionDuration = Date.now() - behaviorData.sessionStart;
+            const actionsPerMinute = (behaviorData.clicks + behaviorData.keystrokes) / (sessionDuration / 60000);
+            
+            return {
+                clicks: behaviorData.clicks,
+                keystrokes: behaviorData.keystrokes,
+                scrolls: behaviorData.scrolls,
+                mouseMovements: behaviorData.mouseMovements,
+                sessionDuration,
+                actionsPerMinute: actionsPerMinute || 0,
+                typingPatterns: [],
+                clickPatterns: []
+            };
+        }
+        
+        function collectNetworkData() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            
+            // Ensure effectiveType is one of the valid values
+            let effectiveType = connection?.effectiveType || '4g';
+            if (!['slow-2g', '2g', '3g', '4g'].includes(effectiveType)) {
+                effectiveType = '4g';
+            }
+            
+            return {
+                effectiveType: effectiveType,
+                downlink: connection?.downlink || 10,
+                rtt: connection?.rtt || 50,
+                saveData: connection?.saveData || false
+            };
+        }
+        
+        function displayResults(data) {
+            const results = document.getElementById('results');
+            const riskScore = document.getElementById('riskScore');
+            const riskDetails = document.getElementById('riskDetails');
+            const recommendations = document.getElementById('recommendations');
+            
+            results.className = `results risk-${data.riskLevel.toLowerCase()}`;
+            
+            riskScore.textContent = `${Math.round(data.riskScore * 100)}% Risk (${data.riskLevel})`;
+            riskScore.className = `risk-score risk-${data.riskLevel.toLowerCase()}`;
+            
+            let factorsHtml = '<h4>Risk Analysis:</h4>';
+            Object.entries(data.riskFactors).forEach(([factor, details]) => {
+                const score = Math.round(details.score * 100);
+                const color = score < 30 ? '#28a745' : score < 60 ? '#ffc107' : '#dc3545';
+                factorsHtml += `
+                    <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <strong>${factor.charAt(0).toUpperCase() + factor.slice(1)}:</strong> 
+                        <span style="color: ${color}; font-weight: bold;">${score}%</span>
+                        <br><small>${details.reason}</small>
+                    </div>
+                `;
+            });
+            riskDetails.innerHTML = factorsHtml;
+            
+            if (data.recommendations.length > 0) {
+                let recHtml = '<h4>Recommendations:</h4>';
+                data.recommendations.forEach(rec => {
+                    recHtml += `<div class="recommendation">${rec}</div>`;
+                });
+                recommendations.innerHTML = recHtml;
+            } else {
+                recommendations.innerHTML = '<h4>✅ No additional verification required</h4>';
+            }
+            
+            results.style.display = 'block';
+        }
+        
+        // Initialize demo when page loads
+        window.addEventListener('load', async () => {
+            await initializeDemo();
+            await initializeLocationAndDevice();
+            
+            // Add event listeners for scenario buttons
+            document.getElementById('normalBtn').addEventListener('click', () => loadScenario('normal'));
+            document.getElementById('suspiciousBtn').addEventListener('click', () => loadScenario('suspicious'));
+            document.getElementById('fraudulentBtn').addEventListener('click', () => loadScenario('fraudulent'));
+            
+            // Start real-time updates
+            setInterval(updateRealTimeDisplay, 1000);
+        });
+    </script>
+</body>
+</html>
+
