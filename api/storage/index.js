@@ -1,8 +1,8 @@
 // Shared storage for the application
-const merchants = new Map();
-const apiKeys = new Map();
+const localStorage = require('./localStorage');
 
 module.exports = {
-  merchants,
-  apiKeys
+  merchants: localStorage.merchants,
+  apiKeys: localStorage.apiKeys,
+  localStorage
 };

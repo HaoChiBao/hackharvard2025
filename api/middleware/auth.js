@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { merchants, apiKeys } = require('../storage');
-const cookieStorage = require('../storage/cookieStorage');
+const localStorage = require('../storage/localStorage');
 
 const authenticateMerchant = (req, res, next) => {
   try {
@@ -15,7 +15,7 @@ const authenticateMerchant = (req, res, next) => {
 
     console.log('Authenticating API key:', apiKey.substring(0, 20) + '...');
     
-    const merchant = cookieStorage.getMerchantByApiKey(req, apiKey);
+    const merchant = localStorage.getMerchantByApiKey(req, apiKey);
     
     if (!merchant) {
       console.log('Authentication failed: Merchant not found for API key');

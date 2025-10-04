@@ -1,6 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
-const cookieStorage = require('../storage/cookieStorage');
+const localStorage = require('../storage/localStorage');
 
 const router = express.Router();
 
@@ -19,8 +19,8 @@ router.post('/send', async (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
     
-    // Store verification code in cookie
-    cookieStorage.setVerificationCode(res, transactionId, {
+    // Store verification code in local storage
+    localStorage.setVerificationCode(res, transactionId, {
       code,
       email,
       expiresAt,
@@ -60,7 +60,7 @@ router.post('/verify', async (req, res) => {
       });
     }
     
-    const verification = cookieStorage.getVerificationCode(req, transactionId);
+    const verification = localStorage.getVerificationCode(req, transactionId);
     
     if (!verification) {
       return res.status(400).json({
@@ -70,7 +70,7 @@ router.post('/verify', async (req, res) => {
     
     // Check attempts
     if (verification.attempts >= 3) {
-      cookieStorage.deleteVerificationCode(req, res, transactionId);
+      localStorage.deleteVerificationCode(req, res, transactionId);
       return res.status(400).json({
         error: 'Too many failed attempts. Please request a new code.'
       });
@@ -79,7 +79,7 @@ router.post('/verify', async (req, res) => {
     // Verify code
     if (verification.code !== code) {
       verification.attempts++;
-      cookieStorage.setVerificationCode(res, transactionId, verification);
+      localStorage.setVerificationCode(res, transactionId, verification);
       
       return res.status(400).json({
         error: 'Invalid verification code',
@@ -88,7 +88,7 @@ router.post('/verify', async (req, res) => {
     }
     
     // Code is valid, delete it
-    cookieStorage.deleteVerificationCode(req, res, transactionId);
+    localStorage.deleteVerificationCode(req, res, transactionId);
     
     res.json({
       success: true,
@@ -110,7 +110,7 @@ router.get('/status/:transactionId', async (req, res) => {
   try {
     const { transactionId } = req.params;
     
-    const verification = cookieStorage.getVerificationCode(req, transactionId);
+    const verification = localStorage.getVerificationCode(req, transactionId);
     
     if (!verification) {
       return res.json({
