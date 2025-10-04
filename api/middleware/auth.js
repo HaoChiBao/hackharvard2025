@@ -1,46 +1,42 @@
 const jwt = require('jsonwebtoken');
 const { merchants, apiKeys } = require('../storage');
+const cookieStorage = require('../storage/cookieStorage');
 
-function authenticateMerchant(req, res, next) {
-  const authHeader = req.headers.authorization;
-  const apiKey = req.headers['x-api-key'];
-
-  console.log('Auth attempt - API Key:', apiKey);
-  console.log('Available API keys:', Array.from(apiKeys.keys()));
-
-  // Try API key first
-  if (apiKey) {
-    const merchant = getMerchantByApiKey(apiKey);
-    console.log('Merchant found by API key:', merchant ? 'YES' : 'NO');
-    if (merchant) {
-      req.merchant = merchant;
-      return next();
-    }
-  }
-
-  // Try JWT token
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
+const authenticateMerchant = (req, res, next) => {
+  try {
+    const apiKey = req.headers['x-api-key'];
     
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-      const merchant = getMerchantById(decoded.merchantId);
-      
-      if (merchant) {
-        req.merchant = merchant;
-        return next();
-      }
-    } catch (error) {
-      console.log('JWT verification failed:', error.message);
+    if (!apiKey) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Please provide a valid API key or JWT token'
+      });
     }
-  }
 
-  console.log('Authentication failed - no valid credentials found');
-  return res.status(401).json({
-    error: 'Authentication required',
-    message: 'Please provide a valid API key or JWT token'
-  });
-}
+    console.log('Authenticating API key:', apiKey.substring(0, 20) + '...');
+    
+    const merchant = cookieStorage.getMerchantByApiKey(req, apiKey);
+    
+    if (!merchant) {
+      console.log('Authentication failed: Merchant not found for API key');
+      return res.status(401).json({
+        error: 'Authentication failed',
+        message: 'Invalid API key'
+      });
+    }
+
+    console.log('Authentication successful for merchant:', merchant.name);
+    req.merchant = merchant;
+    next();
+    
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.status(500).json({
+      error: 'Authentication error',
+      message: 'An error occurred during authentication'
+    });
+  }
+};
 
 function getMerchantByApiKey(apiKey) {
   const merchant = apiKeys.get(apiKey);
@@ -58,9 +54,7 @@ function getMerchantById(merchantId) {
   return null;
 }
 
-module.exports = {
-  authenticateMerchant
-};
+module.exports = { authenticateMerchant };
 
 
 

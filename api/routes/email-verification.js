@@ -1,11 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
-const { merchants, apiKeys } = require('../storage');
+const cookieStorage = require('../storage/cookieStorage');
 
 const router = express.Router();
-
-// Store verification codes (in production, use Redis or database)
-const verificationCodes = new Map();
 
 // POST /api/email-verification/send
 router.post('/send', async (req, res) => {
@@ -22,8 +19,8 @@ router.post('/send', async (req, res) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + (10 * 60 * 1000); // 10 minutes
     
-    // Store verification code
-    verificationCodes.set(transactionId, {
+    // Store verification code in cookie
+    cookieStorage.setVerificationCode(res, transactionId, {
       code,
       email,
       expiresAt,
@@ -32,21 +29,22 @@ router.post('/send', async (req, res) => {
     });
     
     // In production, send actual email
-    console.log(`📧 Verification code for ${email}: ${code}`);
-    console.log(`🔗 Verification link: http://localhost:3001/verify?code=${code}&transaction=${transactionId}`);
+    console.log(`📧 Email verification sent to ${email}`);
+    console.log(`🔑 Verification code: ${code}`);
+    console.log(`⏰ Expires at: ${new Date(expiresAt).toISOString()}`);
     
-    // For demo purposes, we'll return the code
     res.json({
       success: true,
       message: 'Verification code sent to email',
-      code: code, // Remove this in production
-      expiresIn: 600 // 10 minutes
+      code: code, // For demo purposes
+      expiresIn: 600 // 10 minutes in seconds
     });
     
   } catch (error) {
     console.error('Email verification error:', error);
     res.status(500).json({
-      error: 'Failed to send verification email'
+      error: 'Email verification failed',
+      message: 'An error occurred while sending verification email'
     });
   }
 });
@@ -62,41 +60,35 @@ router.post('/verify', async (req, res) => {
       });
     }
     
-    const verification = verificationCodes.get(transactionId);
+    const verification = cookieStorage.getVerificationCode(req, transactionId);
     
     if (!verification) {
-      return res.status(404).json({
-        error: 'Verification code not found or expired'
-      });
-    }
-    
-    // Check if expired
-    if (Date.now() > verification.expiresAt) {
-      verificationCodes.delete(transactionId);
       return res.status(400).json({
-        error: 'Verification code expired'
+        error: 'Invalid or expired verification code'
       });
     }
     
     // Check attempts
     if (verification.attempts >= 3) {
-      verificationCodes.delete(transactionId);
+      cookieStorage.deleteVerificationCode(req, res, transactionId);
       return res.status(400).json({
-        error: 'Too many failed attempts'
+        error: 'Too many failed attempts. Please request a new code.'
       });
     }
     
     // Verify code
     if (verification.code !== code) {
       verification.attempts++;
+      cookieStorage.setVerificationCode(res, transactionId, verification);
+      
       return res.status(400).json({
         error: 'Invalid verification code',
-        attemptsLeft: 3 - verification.attempts
+        attemptsRemaining: 3 - verification.attempts
       });
     }
     
-    // Code is valid
-    verificationCodes.delete(transactionId);
+    // Code is valid, delete it
+    cookieStorage.deleteVerificationCode(req, res, transactionId);
     
     res.json({
       success: true,
@@ -107,7 +99,8 @@ router.post('/verify', async (req, res) => {
   } catch (error) {
     console.error('Email verification error:', error);
     res.status(500).json({
-      error: 'Failed to verify email'
+      error: 'Email verification failed',
+      message: 'An error occurred while verifying code'
     });
   }
 });
@@ -116,26 +109,34 @@ router.post('/verify', async (req, res) => {
 router.get('/status/:transactionId', async (req, res) => {
   try {
     const { transactionId } = req.params;
-    const verification = verificationCodes.get(transactionId);
+    
+    const verification = cookieStorage.getVerificationCode(req, transactionId);
     
     if (!verification) {
       return res.json({
-        verified: false,
-        message: 'No verification required or code expired'
+        success: true,
+        data: {
+          status: 'not_found',
+          message: 'No verification found for this transaction'
+        }
       });
     }
     
     res.json({
-      verified: false,
-      email: verification.email,
-      expiresAt: verification.expiresAt,
-      attempts: verification.attempts
+      success: true,
+      data: {
+        status: 'pending',
+        email: verification.email,
+        expiresAt: verification.expiresAt,
+        attempts: verification.attempts
+      }
     });
     
   } catch (error) {
     console.error('Status check error:', error);
     res.status(500).json({
-      error: 'Failed to check verification status'
+      error: 'Status check failed',
+      message: 'An error occurred while checking status'
     });
   }
 });
