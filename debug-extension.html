@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        input, textarea, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .debug-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Extension Debug Test</h1>
+    <p>This page helps debug the fraud detection extension behavior tracking.</p>
+    
+    <div class="debug-info">
+        <h3>Debug Instructions:</h3>
+        <ol>
+            <li>Open Chrome DevTools (F12)</li>
+            <li>Go to Console tab</li>
+            <li>Look for messages starting with "Fraud Tracker:"</li>
+            <li>Interact with this page and watch for behavior tracking messages</li>
+            <li>Open the extension popup and check if data is updating</li>
+        </ol>
+        
+        <h3>Quick Test:</h3>
+        <button onclick="testBehaviorTracking()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+            Test Behavior Tracking
+        </button>
+        <div id="testResults" style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace; font-size: 12px;"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Click Tracking</h2>
+        <p>Click these buttons and check the console for "Click detected!" messages:</p>
+        <button onclick="alert('Button 1 clicked!')">Click Me 1</button>
+        <button onclick="alert('Button 2 clicked!')">Click Me 2</button>
+        <button onclick="console.log('Button 3 clicked!')">Click Me 3</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Keystroke Tracking</h2>
+        <p>Type in these fields and check the console for "Keystroke detected!" messages:</p>
+        <input type="text" placeholder="Type here to test keystroke tracking..." style="width: 100%;">
+        <textarea placeholder="Type here too..." style="width: 100%; height: 100px;"></textarea>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Mouse Movement</h2>
+        <p>Move your mouse around this area and check the console for mouse movement tracking:</p>
+        <div style="height: 200px; background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+            Move your mouse around here!
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Scrolling</h2>
+        <p>Scroll up and down this page to test scroll tracking:</p>
+        <div style="height: 500px; background: linear-gradient(to bottom, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+            Scroll through this area!
+        </div>
+    </div>
+    
+    <div class="debug-info">
+        <h3>Expected Console Messages:</h3>
+        <ul>
+            <li><code>Fraud Tracker: content.js loaded on [URL]</code></li>
+            <li><code>Behavior tracking started</code></li>
+            <li><code>Click detected! Total clicks: [number]</code></li>
+            <li><code>Keystroke detected! Total keystrokes: [number]</code></li>
+            <li><code>Updated global behavior data: {...}</code> (from background script)</li>
+        </ul>
+    </div>
+    
+    <script>
+        // Add some additional debugging
+        console.log('Debug page loaded at:', new Date().toISOString());
+        
+        // Check if content script is loaded
+        setTimeout(() => {
+            if (window.chrome && chrome.runtime) {
+                console.log('Chrome extension APIs available');
+            } else {
+                console.log('Chrome extension APIs NOT available');
+            }
+        }, 1000);
+        
+        // Test function to check if behavior tracking is working
+        function testBehaviorTracking() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = 'Testing behavior tracking...<br>';
+            
+            // Check if content script is loaded
+            const hasContentScript = window.chrome && chrome.runtime;
+            results.innerHTML += `Chrome extension APIs: ${hasContentScript ? '✅ Available' : '❌ Not available'}<br>`;
+            
+            // Check console for Fraud Tracker messages
+            results.innerHTML += 'Check console for "Fraud Tracker:" messages<br>';
+            results.innerHTML += 'Expected messages:<br>';
+            results.innerHTML += '- "Fraud Tracker: content.js loaded on [URL]"<br>';
+            results.innerHTML += '- "Fraud Tracker: startBehaviorTracking() called"<br>';
+            results.innerHTML += '- "Fraud Tracker: Behavior tracking started successfully"<br>';
+            results.innerHTML += '<br>Now click buttons and type to test behavior detection!<br>';
+            
+            // Simulate some interactions
+            setTimeout(() => {
+                results.innerHTML += '<br>Simulating test interactions...<br>';
+                
+                // Simulate click
+                const clickEvent = new MouseEvent('click', {
+                    clientX: 100,
+                    clientY: 100
+                });
+                document.dispatchEvent(clickEvent);
+                
+                // Simulate keystroke
+                const keyEvent = new KeyboardEvent('keydown', {
+                    key: 'a'
+                });
+                document.dispatchEvent(keyEvent);
+                
+                results.innerHTML += 'Test interactions dispatched. Check console for "Click detected!" and "Keystroke detected!" messages.<br>';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

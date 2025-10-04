@@ -2,9 +2,52 @@
 // NOTE: To use the cookies API, your manifest.json must include:
 // "permissions": ["cookies"], and appropriate "host_permissions" (e.g., "https://*/*", "http://*/*")
 
+// Global state for persistent tracking
+let globalBehaviorData = {
+  clicks: 0,
+  keystrokes: 0,
+  mouseMovements: 0,
+  scrolls: 0,
+  sessionStart: Date.now(),
+  typingPatterns: [],
+  clickPatterns: []
+};
+
+let trackingInterval = null;
+let isTracking = false;
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('background.js loaded');
+  startPersistentTracking();
 });
+
+// Start persistent behavior tracking
+function startPersistentTracking() {
+  if (isTracking) return;
+  
+  isTracking = true;
+  console.log('Starting persistent behavior tracking');
+  
+  // Update global state every second
+  trackingInterval = setInterval(() => {
+    // This will be updated by content scripts
+    console.log('Background tracking active:', {
+      clicks: globalBehaviorData.clicks,
+      keystrokes: globalBehaviorData.keystrokes,
+      sessionDuration: Math.floor((Date.now() - globalBehaviorData.sessionStart) / 1000)
+    });
+  }, 5000); // Log every 5 seconds for debugging
+}
+
+// Stop persistent tracking
+function stopPersistentTracking() {
+  if (trackingInterval) {
+    clearInterval(trackingInterval);
+    trackingInterval = null;
+  }
+  isTracking = false;
+  console.log('Stopped persistent behavior tracking');
+}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const tabId = sender && sender.tab ? sender.tab.id : undefined;
@@ -63,6 +106,78 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'refresh': {
       replyToSenderTab({ action: 'refresh' });
       break;
+    }
+
+    // Handle behavior data updates from content scripts
+    case 'updateBehaviorData': {
+      if (request.data) {
+        globalBehaviorData = { ...globalBehaviorData, ...request.data };
+        console.log('Background: Updated global behavior data:', {
+          clicks: globalBehaviorData.clicks,
+          keystrokes: globalBehaviorData.keystrokes,
+          mouseMovements: globalBehaviorData.mouseMovements,
+          scrolls: globalBehaviorData.scrolls,
+          sessionDuration: Math.floor((Date.now() - globalBehaviorData.sessionStart) / 1000)
+        });
+        
+        // Store in Chrome storage for persistence
+        chrome.storage.local.set({
+          globalBehaviorData: globalBehaviorData
+        });
+      }
+      break;
+    }
+
+    // Get current behavior data for popup
+    case 'getBehaviorData': {
+      const sessionDuration = Math.floor((Date.now() - globalBehaviorData.sessionStart) / 1000);
+      
+      // Simple analysis functions
+      function analyzeTypingPattern() {
+        if (globalBehaviorData.typingPatterns.length < 2) return 'Insufficient data';
+        
+        const patterns = globalBehaviorData.typingPatterns;
+        const intervals = patterns.slice(1).map((p, i) => p.timeSinceLastKey);
+        const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        
+        if (avgInterval < 100) return 'Suspicious (too fast)';
+        if (avgInterval > 2000) return 'Suspicious (too slow)';
+        if (intervals.some(i => i === 0)) return 'Suspicious (simultaneous)';
+        return 'Normal';
+      }
+
+      function analyzeMouseActivity() {
+        const sessionDuration = (Date.now() - globalBehaviorData.sessionStart) / 1000;
+        const movementsPerSecond = globalBehaviorData.mouseMovements / sessionDuration;
+        
+        if (movementsPerSecond < 0.1) return 'Suspicious (too low)';
+        if (movementsPerSecond > 10) return 'Suspicious (too high)';
+        return 'Normal';
+      }
+
+      function analyzePageInteraction() {
+        const sessionDuration = (Date.now() - globalBehaviorData.sessionStart) / 1000;
+        const clicksPerSecond = globalBehaviorData.clicks / sessionDuration;
+        
+        if (clicksPerSecond < 0.01) return 'Suspicious (too low)';
+        if (clicksPerSecond > 2) return 'Suspicious (too high)';
+        return 'Normal';
+      }
+
+      const response = {
+        clicks: globalBehaviorData.clicks,
+        keystrokes: globalBehaviorData.keystrokes,
+        mouseMovements: globalBehaviorData.mouseMovements,
+        scrolls: globalBehaviorData.scrolls,
+        sessionDuration: sessionDuration,
+        typingPattern: analyzeTypingPattern(),
+        mouseActivity: analyzeMouseActivity(),
+        pageInteraction: analyzePageInteraction()
+      };
+      
+      console.log('Background: Sending behavior data to popup:', response);
+      sendResponse(response);
+      return true; // Keep message channel open
     }
 
     case 'test': {

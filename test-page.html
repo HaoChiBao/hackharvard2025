@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Tracker Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        input, textarea, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Fraud Tracker Test Page</h1>
+    <p>This page is designed to test the fraud detection behavior tracking. Open the Chrome extension popup to see live behavior analysis!</p>
+    
+    <div class="test-section">
+        <h2>Test Typing Patterns</h2>
+        <p>Type in these fields to test keystroke analysis:</p>
+        <input type="text" placeholder="Type normally here..." style="width: 100%;">
+        <textarea placeholder="Type at different speeds here..." style="width: 100%; height: 100px;"></textarea>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Mouse Activity</h2>
+        <p>Click buttons and move your mouse around:</p>
+        <button onclick="alert('Button clicked!')">Click Me</button>
+        <button onclick="console.log('Another click')">Click Me Too</button>
+        <button onclick="document.body.style.backgroundColor = 'lightblue'">Change Background</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Scrolling</h2>
+        <p>Scroll up and down this page to test scroll tracking:</p>
+        <div style="height: 500px; background: linear-gradient(to bottom, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);">
+            <p style="padding: 20px; color: white; text-align: center; font-size: 18px;">
+                Scroll through this colorful section to test scroll tracking!
+            </p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Form Interaction</h2>
+        <p>Fill out this form to test comprehensive behavior tracking:</p>
+        <form>
+            <input type="text" placeholder="First Name" required>
+            <input type="text" placeholder="Last Name" required>
+            <input type="email" placeholder="Email" required>
+            <input type="tel" placeholder="Phone Number">
+            <textarea placeholder="Comments" style="width: 100%; height: 80px;"></textarea>
+            <button type="submit">Submit Form</button>
+        </form>
+    </div>
+    
+    <div class="test-section">
+        <h2>Instructions</h2>
+        <ol>
+            <li>Open the Chrome extension popup</li>
+            <li>Enter your API key if not already set</li>
+            <li>Interact with this page (type, click, scroll, move mouse)</li>
+            <li>Watch the live behavior analysis update in real-time</li>
+            <li>Check the browser console for debugging information</li>
+        </ol>
+    </div>
+    
+    <script>
+        // Add some interactive elements for testing
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Test page loaded - ready for fraud tracking!');
+            
+            // Add some random mouse movement simulation
+            let mouseSimulation = false;
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'm' && e.ctrlKey) {
+                    mouseSimulation = !mouseSimulation;
+                    console.log('Mouse simulation:', mouseSimulation ? 'ON' : 'OFF');
+                }
+            });
+            
+            if (mouseSimulation) {
+                setInterval(() => {
+                    const event = new MouseEvent('mousemove', {
+                        clientX: Math.random() * window.innerWidth,
+                        clientY: Math.random() * window.innerHeight
+                    });
+                    document.dispatchEvent(event);
+                }, 100);
+            }
+        });
+    </script>
+</body>
+</html>
