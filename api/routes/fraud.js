@@ -2,6 +2,7 @@ const express = require('express');
 const Joi = require('joi');
 const FraudDetector = require('../services/fraudDetector');
 const { authenticateMerchant } = require('../middleware/auth');
+const localStorage = require('../storage/localStorage');
 
 const router = express.Router();
 const fraudDetector = new FraudDetector();
@@ -134,6 +135,54 @@ router.get('/score/:transactionId', authenticateMerchant, async (req, res) => {
   }
 });
 
+// GET /api/fraud/analysis/:transactionId - Get full analysis data
+router.get('/analysis/:transactionId', authenticateMerchant, async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    
+    const analysis = await getAnalysis(transactionId);
+    
+    if (!analysis) {
+      return res.status(404).json({
+        error: 'Transaction not found',
+        message: 'No analysis found for this transaction ID'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: analysis
+    });
+
+  } catch (error) {
+    console.error('Analysis retrieval error:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve analysis'
+    });
+  }
+});
+
+// GET /api/fraud/analyses - Get all fraud analyses
+router.get('/analyses', authenticateMerchant, async (req, res) => {
+  try {
+    const allData = localStorage.getAllData();
+    
+    res.json({
+      success: true,
+      data: {
+        transactions: allData.transactions,
+        count: Object.keys(allData.transactions).length
+      }
+    });
+
+  } catch (error) {
+    console.error('Analyses retrieval error:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve analyses'
+    });
+  }
+});
+
 // POST /api/fraud/batch-analyze
 router.post('/batch-analyze', authenticateMerchant, async (req, res) => {
   try {
@@ -181,15 +230,16 @@ router.post('/batch-analyze', authenticateMerchant, async (req, res) => {
   }
 });
 
-// Helper functions (in production, these would interact with database)
+// Helper functions - now using LocalStorage
 async function storeAnalysis(analysis) {
-  // Mock storage - in production, save to database
+  // Store analysis in local storage
+  localStorage.setTransactionAnalysis(null, analysis.transactionId, analysis);
   console.log('Storing analysis:', analysis.transactionId);
 }
 
 async function getAnalysis(transactionId) {
-  // Mock retrieval - in production, fetch from database
-  return null;
+  // Retrieve analysis from local storage
+  return localStorage.getTransactionAnalysis(null, transactionId);
 }
 
 async function sendWebhook(webhookUrl, analysis) {
