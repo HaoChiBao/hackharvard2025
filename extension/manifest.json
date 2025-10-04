@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "000000 - Stuff",
+  "version": "1.0",
+  "description": "Track dat",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*"],
+      "js": ["app/content/scrape.js", "app/content/attachElements.js", "app/content/attachVisualizer.js", "app/content/content.js"],
+      "css": ["app/content/css/content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "app/popup/popup.html",
+    "default_title": ""
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["app/*"],
+      "matches": ["*"]
+    }
+  ]
+}
+
+
+
+
+
