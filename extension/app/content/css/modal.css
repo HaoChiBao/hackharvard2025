@@ -360,6 +360,14 @@ modal-component .done-overlay .done-details{
   bottom: 15px;
 }
 
+modal-component .done-overlay .done-content{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+}
+
 modal-component .done-overlay .done-check{
   height: 20px;
 }
