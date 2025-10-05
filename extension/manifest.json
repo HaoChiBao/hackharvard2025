@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "00000 - W",
-  "description": "Woah",
+  "name": "Visa Verify",
+  "description": "Visa Verify brings multi-factor fraud detection to online payments using behavioural biometrics, device history, and risk scoring to protect merchants and buyers.",
   "version": "1.0.0",
 
   "optional_host_permissions": ["<all_urls>"],
@@ -14,16 +14,16 @@
     }
   ],
   "icons": {
-    "16": "./assets/images/icon16.png",
-    "48": "./assets/images/icon16.png",
-    "128": "./assets/images/icon16.png"
+    "16": "./assets/images/visaverify.png",
+    "48": "./assets/images/visaverify.png",
+    "128": "./assets/images/visaverify.png"
   },
   "background": {
     "service_worker": "./background/background.js",
     "type": "module"
   },
   "action": {
-    "default_icon": "./assets/images/icon16.png",
+    "default_icon": "./assets/images/visaverify.png",
     "default_popup": "./app/popup/popup.html"
   },
   "content_scripts": [
