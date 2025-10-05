@@ -1,115 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fraud Detection System - Live Monitor</title>
-    <link rel="stylesheet" href="popup.css" />
-  </head>
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
     <div class="container">
-      <div class="header">
-        <h1>🛡️ Fraud Detection</h1>
-        <div class="status" id="status">Initializing...</div>
-        <div class="monitoring-indicator">
-          <span class="pulse-dot" id="pulseDot"></span>
-          <span id="monitoringStatus">Live Monitoring</span>
-          <div class="live-timer">
-            <span id="liveTimer">3s</span>
-            <span class="timer-label">Live Display</span>
-          </div>
-        </div>
-      </div>
-      
-      <div class="api-section">
-        <h3>System Configuration</h3>
-        <input type="text" id="apiKey" placeholder="Enter API Key (sk_...)" />
-        <button id="saveApiKey">Activate System</button>
-        <button id="testConnection">Test Connection</button>
-      </div>
+        <h1>VISA Verify</h1>
+        <button id = 'test'>wasd</button>
+        <div class="content">
 
-      <div class="fraud-detection" id="fraudDetection" style="display: none;">
-        <!-- Real-time Fraud Monitoring -->
-        <div class="current-analysis" id="currentAnalysis">
-          <h3>🛡️ Fraud Detection Active</h3>
-          <div class="risk-meter">
-            <div class="risk-percentage" id="riskPercentage">0%</div>
-            <div class="risk-bar">
-              <div class="risk-fill" id="riskFill"></div>
+            <div class="page" className = 'page-0'>
+                <div class="risk-score">
+                    <div class="score">86</div>
+                    <h2>Transaction Risk Score</h2>
+                </div>
+                <div class="risks">
+                    <h2>Top Risk Factors</h2>
+                    <ul>
+                        <li>
+                            <img src="../../assets/images/icon16.png" alt="">
+                            <p>Unusual Location</p>
+                        </li>
+                        <li>
+                            <img src="../../assets/images/icon16.png" alt="">
+                            <p>Unusual Behavioural Biometrics</p>
+                        </li>
+                        <li>
+                            <img src="../../assets/images/icon16.png" alt="">
+                            <p>Amount Unusually Large</p>
+                        </li>
+                    </ul>
+                </div>
+                <div class="authorized">
+                    <h1>APPROVED</h1>
+                    <p>Please Proceed with Transaction</p>
+                </div>
             </div>
-            <div class="risk-label" id="riskLabel">Monitoring user behavior...</div>
-          </div>
-          
-          <div class="authenticity-checks" id="authenticityChecks">
-            <!-- Real-time authenticity checks will be populated here -->
-          </div>
-          
-          <div class="fraud-status" id="fraudStatus">
-            <div class="status-icon" id="statusIcon">🟢</div>
-            <div class="status-text" id="statusText">User appears legitimate</div>
-          </div>
-        </div>
+            <div class="page" className = 'page-1'>
+                2
+            </div>
+            <div class="page" className = 'page-2'>
+            </div>
 
-        <!-- Live Behavior Tracking -->
-        <div class="behavior-tracking" id="behaviorTracking">
-          <h3>📊 Live Behavior Analysis</h3>
-          <div class="behavior-metrics">
-            <div class="metric">
-              <span class="metric-label">Typing Pattern:</span>
-              <span class="metric-value" id="typingPattern">Analyzing...</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">Mouse Activity:</span>
-              <span class="metric-value" id="mouseActivity">Analyzing...</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">Page Interaction:</span>
-              <span class="metric-value" id="pageInteraction">Analyzing...</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">Session Duration:</span>
-              <span class="metric-value" id="sessionDuration">0s</span>
-            </div>
-          </div>
-          
-          <!-- Raw Behavior Data -->
-          <div class="raw-data">
-            <h4>Raw Behavior Data</h4>
-            <div class="data-grid">
-              <div class="data-item">
-                <span class="data-label">Clicks:</span>
-                <span class="data-value" id="clicks">0</span>
-              </div>
-              <div class="data-item">
-                <span class="data-label">Keystrokes:</span>
-                <span class="data-value" id="keystrokes">0</span>
-              </div>
-              <div class="data-item">
-                <span class="data-label">Mouse Moves:</span>
-                <span class="data-value" id="mouseMovements">0</span>
-              </div>
-              <div class="data-item">
-                <span class="data-label">Scrolls:</span>
-                <span class="data-value" id="scrolls">0</span>
-              </div>
-            </div>
-          </div>
         </div>
-
-        <!-- Recent Transactions -->
-        <div class="recent-transactions">
-          <h3>📊 Recent Activity</h3>
-          <div class="transactions-list" id="transactionsList">
-            <!-- Recent transactions will be populated here -->
-          </div>
-        </div>
-        
-        <button id="refreshData" class="refresh-btn">🔄 Refresh Analysis</button>
-        <button id="testDataUpdate" class="refresh-btn" style="background: #28a745;">🧪 Test Data Update</button>
-      </div>
     </div>
-    
-    <script src="popup.js"></script>
-    <script src="loadFonts.js"></script>
-  </body>
+</body>
+<script src="popup.js"></script>
 </html>

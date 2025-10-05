@@ -11,7 +11,7 @@ payment-tracker-popup {
   width: 400px;
   min-height: 200px;
   background-color: white;
-  z-index: 10000;
+  z-index: 21000000;
   padding: 16px 20px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-radius: 10px;

@@ -1,0 +1,404 @@
+/* styles.css */
+
+/* RESET INSIDE OVERLAY */
+bg-component *{
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* OVERLAY BACKDROP */
+bg-component {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+
+  background-color: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(5px);
+
+  z-index: 2100000;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* MODAL CARD */
+modal-component {
+  position: relative; /* needed so .done-overlay can cover it */
+  width: 40%;
+  background: linear-gradient(180deg, #494D8F 40%, #F5CC5E 100%);
+  padding: 20px; /* bigger margin inside container */
+
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  border-radius: 15px;
+
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden; /* hide overlay edges if any animation */
+}
+
+/* INNER CONTAINER */
+modal-component .container{
+  background-color: rgba(255, 255, 255, 0.92);
+  width: 100%;
+  height: 100%;
+  padding: 36px; /* bigger */
+  border-radius: 12px;
+}
+
+/* SCORE AREA */
+modal-component .container .risk-score{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;   
+  flex-direction: column;   
+  gap: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #b5b4b4;
+}
+
+modal-component .container .risk-score .score-label {
+  font-size: 20px;
+  font-weight: normal;
+  color: #1A1F71;
+}
+
+modal-component .container .risk-score .score-value {
+  font-size: 60px;
+  font-weight: bold;
+  width: 170px;   /* larger */
+  aspect-ratio: 1/1;
+  background-color: #ececec;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ANALYZE SECTION */
+modal-component .container .analyze-risk{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+
+  gap: 12px;
+  padding: 12px;
+
+  border-bottom: 1px solid #a1a0a0;
+}
+
+modal-component .container .analyze-risk .analyze-label{
+  font-size: 20px;
+  color: #1A1F71;
+}
+
+/* --- INFO LIST + STATUS DOT --- */
+modal-component .container .analyze-list{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;          /* bigger gap */
+  margin-top: 6px;
+}
+
+/* Item base look */
+modal-component .container .analyze-list .info-item{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;             /* bigger padding */
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* Hover look (only really applies when not windowed) */
+modal-component .container .analyze-list .info-item:hover{
+  background: #f8f8f8;
+  border-color: #dadada;
+}
+
+modal-component .container .analyze-list .info-item .info-title{
+  font-size: 16px;
+  color: #0f1a56;
+}
+
+/* the status dot on the right */
+modal-component .container .analyze-list .info-item .status-dot{
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 12px;
+  margin-left: 12px;
+  background: #c9c9c9;               /* default: gray */
+  box-shadow: inset 0 0 0 2px #ffffffa8;
+  transition: background 160ms ease, transform 120ms ease;
+}
+
+/* when the item is marked as added, the dot turns green */
+modal-component .container .analyze-list .info-item.added .status-dot{
+  background: #16a34a; /* green */
+  transform: scale(1.05);
+}
+
+/* --- WINDOWED VIEWPORT (shows N items, shifts upward) --- */
+modal-component .container .analyze-list.windowed{
+  /* custom props set from JS */
+  --visible-count: 2;  /* fallback; JS overwrites */
+  --row-h: 54px;       /* matches JS */
+  --row-gap: 12px;     /* matches JS */
+
+  position: relative;
+  height: calc(var(--visible-count) * var(--row-h) + (var(--visible-count) - 1) * var(--row-gap));
+  overflow: hidden;
+}
+
+/* Stack items absolutely; JS controls --y, --opacity, --scale */
+modal-component .container .analyze-list.windowed .info-item{
+  position: absolute;
+  left: 0; right: 0;
+  opacity: var(--opacity, 0);
+  transform: translateY(var(--y, 0px)) scale(var(--scale, 1));
+  transition:
+    transform 220ms ease,
+    opacity 200ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
+  pointer-events: none; /* pointer disabled in motion; list toggles this globally */
+}
+
+/* Only visible items accept pointer when not locked */
+modal-component .container .analyze-list.windowed .info-item.is-visible{
+  pointer-events: auto;
+}
+
+/* Exiting state (fade upward + minimize) */
+modal-component .container .analyze-list.windowed .info-item.exiting{
+  opacity: 0 !important;
+  transform: translateY(-10px) scale(0.94) !important;
+  pointer-events: none !important;
+}
+
+/* Locked state prevents pointer toggles during auto sequence */
+modal-component .container .analyze-list.locked .info-item{
+  pointer-events: none !important;
+}
+
+/* ===== Top Risk + Email Auth blocks ===== */
+modal-component .container .top-items{
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  padding: 18px;
+
+  border-bottom: 1px solid #a1a0a0;
+}
+
+modal-component .container .top-items .top-label{
+  font-size: 20px;
+  color: #1A1F71;
+  margin-bottom: 8px;
+}
+
+modal-component .container .top-items .top-risk-item{
+  color: #0f1a56;
+  font-size: 16px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+modal-component .container .top-items .top-risk-item img{
+  width: 20px;
+  height: 20px;
+}
+
+modal-component .container .email-authentication{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;   
+  flex-direction: column;
+  padding: 18px;
+  position: relative;
+  z-index: 3; /* ensure inputs stay on top of any overlay/glass */
+}
+
+modal-component .container .email-authentication .email-label{
+  font-size: 20px;
+  color: #1A1F71;
+  margin-bottom: 10px;
+}
+
+modal-component .container .email-authentication .email-subtitle{
+  font-size: 14px;
+  color: #1A1F71;
+  margin-bottom: 10px;
+}
+
+modal-component .container .email-authentication .email-code{
+  display: flex;
+  justify-content: center;
+  align-items: center;   
+  gap: 10px;
+}
+
+/* Make sure code inputs are always readable and interactive */
+modal-component .container .email-authentication .email-code input.code-cell{
+  width: 46px;
+  height: 58px;
+  font-size: 26px;
+  text-align: center;
+  border: 1px solid #bbb;
+  border-radius: 10px;
+
+  color: #111 !important;
+  background: #fff !important;
+  opacity: 1 !important;
+  caret-color: #111;
+  outline: none;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+
+modal-component .container .email-authentication .email-code input.code-cell:focus{
+  border-color: #1A1F71;
+  box-shadow: 0 0 0 3px rgba(26,31,113,0.2);
+}
+
+/* ===== COMPLETION OVERLAY (covers modal after finish) ===== */
+modal-component .done-overlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 13, 40, 0.45);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  z-index: 2;
+
+  overflow: hidden;
+}
+
+modal-component .done-overlay.show{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+modal-component .done-overlay .done-surface{
+  position: relative;           /* anchor the X button */
+  background: #0f1a56;
+  color: #fff;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  padding: 20px 22px;
+  text-align: center;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column; /* ensure title above subtitle */
+  gap: 12px;
+}
+
+/* Initial (pre-animate) states */
+modal-component .done-overlay .done-title{
+  margin-bottom: 6px;
+  width: 40%;
+  opacity: 0;
+  transform: translateX(400px);
+  transition: transform 750ms cubic-bezier(.22,.61,.36,1), opacity 750ms ease;
+}
+
+modal-component .done-overlay .done-subtitle{
+  font-size: 20px;
+  opacity: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  transform: translateY(8px);
+  transition: transform 600ms cubic-bezier(.22,.61,.36,1), opacity 600ms ease;
+}
+
+modal-component .done-overlay .done-details{
+  font-size: 14px;
+  color: #dda700;
+  text-decoration: underline;
+  cursor: pointer;
+
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+}
+
+modal-component .done-overlay .done-check{
+  height: 20px;
+}
+
+/* Animated "in" states (applied by JS after 500ms) */
+modal-component .done-overlay.show .done-title.in{
+  opacity: 1;
+  transform: translateX(0);
+}
+
+modal-component .done-overlay.show .done-subtitle.in{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Top-right "X" button */
+modal-component .done-overlay .done-close-btn{
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  display: grid;
+  place-items: center;
+
+  width: 36px;
+  height: 36px;
+
+  appearance: none;
+  border: none;
+  border-radius: 9999px;
+
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+modal-component .done-overlay .done-close-btn:hover{
+  background: rgba(255,255,255,0.2);
+}
+
+modal-component .done-overlay .done-close-btn:active{
+  transform: scale(0.97);
+}
