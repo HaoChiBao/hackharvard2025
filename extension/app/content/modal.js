@@ -4,10 +4,10 @@
    - If score < RISK_REVIEW_THRESHOLD → show Done overlay, circle green, modal exitable
    - If score >= RISK_REVIEW_THRESHOLD → hide overlay, show Email Auth, circle red, modal NOT exitable, inputs focusable/editable
 */
-window.addEventListener('load', async () => {
+window.addEventListener("load", async () => {
   // ===== URL gate: only run on pages whose URL contains "checkout" =====
-  const href = String((location && location.href) || '');
-  if (!href.toLowerCase().includes('checkout')) {
+  const href = String((location && location.href) || "");
+  if (!href.toLowerCase().includes("checkout")) {
     return; // do nothing on non-checkout pages
   }
 
@@ -16,16 +16,18 @@ window.addEventListener('load', async () => {
 
   // Optional refresh listener
   chrome.runtime?.onMessage?.addListener?.(function (request) {
-    if (request?.action === 'refresh') {
+    if (request?.action === "refresh") {
       setTimeout(() => {
-        try { typeof sendMessage === 'function' && sendMessage('refresh'); } catch {}
-        console.log('refreshed content.js');
+        try {
+          typeof sendMessage === "function" && sendMessage("refresh");
+        } catch {}
+        console.log("refreshed content.js");
       }, 18000);
     }
   });
 
   // ---------- helpers ----------
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const safeNum = (v, d = 0) => (Number.isFinite(v) ? v : d);
@@ -51,19 +53,22 @@ window.addEventListener('load', async () => {
         return;
       }
     } catch {}
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {}
   }
 
   // ---------- purchase history helpers ----------
   async function getPurchaseHistory() {
     try {
       if (chrome?.storage?.local) {
-        const res = await chrome.storage.local.get(['purchaseHistory']);
-        if (res && Array.isArray(res.purchaseHistory)) return res.purchaseHistory;
+        const res = await chrome.storage.local.get(["purchaseHistory"]);
+        if (res && Array.isArray(res.purchaseHistory))
+          return res.purchaseHistory;
       }
     } catch {}
     try {
-      const raw = localStorage.getItem('purchaseHistory');
+      const raw = localStorage.getItem("purchaseHistory");
       const val = raw ? JSON.parse(raw) : null;
       return Array.isArray(val) ? val : [];
     } catch {}
@@ -71,21 +76,51 @@ window.addEventListener('load', async () => {
   }
 
   // ---------- PRICE DETECTION ----------
-  const TOTAL_KEYWORDS = ['total','order total','grand total','amount due','to pay','pay now','total due','order summary','final total','you pay'];
-  const NEGATIVE_HINTS = ['shipping','tax','fee','promo','discount','gift card'];
-  const SUMMARY_CONTAINER_HINTS = ['summary','totals','checkout','order','cart','payment'];
-  const CURRENCY_RX = /(?:USD|CAD|AUD|NZD|EUR|GBP|JPY|CHF|SEK|NOK|DKK|MXN|BRL|INR|CNY|HKD|KRW|SGD|ZAR|AED|SAR|QAR|TRY|PLN|CZK|HUF|ILS|RON|COP|ARS|CLP|PEN|TWD|THB|IDR|MYR|PHP|VND|\$|£|€|¥)\s?[\d\.,]+/i;
-  const MONEY_FRAGMENT_RX = /([\$£€¥]|USD|CAD|AUD|NZD|EUR|GBP|JPY)\s*([\d\.,]+)/i;
+  const TOTAL_KEYWORDS = [
+    "total",
+    "order total",
+    "grand total",
+    "amount due",
+    "to pay",
+    "pay now",
+    "total due",
+    "order summary",
+    "final total",
+    "you pay",
+  ];
+  const NEGATIVE_HINTS = [
+    "shipping",
+    "tax",
+    "fee",
+    "promo",
+    "discount",
+    "gift card",
+  ];
+  const SUMMARY_CONTAINER_HINTS = [
+    "summary",
+    "totals",
+    "checkout",
+    "order",
+    "cart",
+    "payment",
+  ];
+  const CURRENCY_RX =
+    /(?:USD|CAD|AUD|NZD|EUR|GBP|JPY|CHF|SEK|NOK|DKK|MXN|BRL|INR|CNY|HKD|KRW|SGD|ZAR|AED|SAR|QAR|TRY|PLN|CZK|HUF|ILS|RON|COP|ARS|CLP|PEN|TWD|THB|IDR|MYR|PHP|VND|\$|£|€|¥)\s?[\d\.,]+/i;
+  const MONEY_FRAGMENT_RX =
+    /([\$£€¥]|USD|CAD|AUD|NZD|EUR|GBP|JPY)\s*([\d\.,]+)/i;
 
   function normalizeNumber(str) {
-    let s = (str || '').replace(/\s+/g, '');
-    if (s.includes(',') && s.includes('.')) {
-      s = s.replace(/,/g, '');
-    } else if (s.includes(',') && !s.includes('.')) {
-      const parts = s.split(',');
-      s = parts[parts.length - 1].length === 2 ? s.replace(',', '.') : s.replace(/,/g, '');
+    let s = (str || "").replace(/\s+/g, "");
+    if (s.includes(",") && s.includes(".")) {
+      s = s.replace(/,/g, "");
+    } else if (s.includes(",") && !s.includes(".")) {
+      const parts = s.split(",");
+      s =
+        parts[parts.length - 1].length === 2
+          ? s.replace(",", ".")
+          : s.replace(/,/g, "");
     }
-    const n = parseFloat(s.replace(/[^\d.]/g, ''));
+    const n = parseFloat(s.replace(/[^\d.]/g, ""));
     return isNaN(n) ? null : n;
   }
   function extractPrice(text) {
@@ -97,105 +132,206 @@ window.addEventListener('load', async () => {
     if (num == null) return null;
     return { amount: num, currency, raw: m[0] };
   }
-  function elementText(el) { return (el && el.textContent ? el.textContent : '').trim(); }
+  function elementText(el) {
+    return (el && el.textContent ? el.textContent : "").trim();
+  }
   function scoreElementForTotal(el) {
     const txtRaw = elementText(el);
     const txt = txtRaw.toLowerCase();
     if (!CURRENCY_RX.test(txt)) return { score: 0, price: null };
-    try { if ((getComputedStyle(el).textDecorationLine || '').includes('line-through')) return { score: 0, price: null }; } catch {}
-    const matches = txt.match(new RegExp(CURRENCY_RX, 'gi')) || [];
-    let bestPrice = matches.length ? extractPrice(matches[matches.length - 1]) : extractPrice(txtRaw);
+    try {
+      if (
+        (getComputedStyle(el).textDecorationLine || "").includes("line-through")
+      )
+        return { score: 0, price: null };
+    } catch {}
+    const matches = txt.match(new RegExp(CURRENCY_RX, "gi")) || [];
+    let bestPrice = matches.length
+      ? extractPrice(matches[matches.length - 1])
+      : extractPrice(txtRaw);
     if (!bestPrice) return { score: 0, price: null };
     let score = 0;
     for (const k of TOTAL_KEYWORDS) if (txt.includes(k)) score += 5;
     for (const n of NEGATIVE_HINTS) if (txt.includes(n)) score -= 2;
-    let cur = el, hops = 0;
+    let cur = el,
+      hops = 0;
     while (cur && hops < 5) {
-      const cls = (cur.className || '').toString().toLowerCase();
-      const id = (cur.id || '').toString().toLowerCase();
-      if (SUMMARY_CONTAINER_HINTS.some(h => cls.includes(h) || id.includes(h))) { score += 3; break; }
-      cur = cur.parentElement; hops++;
+      const cls = (cur.className || "").toString().toLowerCase();
+      const id = (cur.id || "").toString().toLowerCase();
+      if (
+        SUMMARY_CONTAINER_HINTS.some((h) => cls.includes(h) || id.includes(h))
+      ) {
+        score += 3;
+        break;
+      }
+      cur = cur.parentElement;
+      hops++;
     }
-    if (bestPrice.amount > 0) score += Math.min(5, Math.floor(bestPrice.amount / 500));
+    if (bestPrice.amount > 0)
+      score += Math.min(5, Math.floor(bestPrice.amount / 500));
     return { score, price: bestPrice };
   }
   function findCheckoutTotal() {
     const obviousSels = [
-      '[data-testid*="total"]','[data-test*="total"]','.order-total','.grand-total','.total','#total',
-      '.summary-total','.amount-due','.order-summary-total','[aria-label*="total"]','[aria-label*="amount due"]'
+      '[data-testid*="total"]',
+      '[data-test*="total"]',
+      ".order-total",
+      ".grand-total",
+      ".total",
+      "#total",
+      ".summary-total",
+      ".amount-due",
+      ".order-summary-total",
+      '[aria-label*="total"]',
+      '[aria-label*="amount due"]',
     ];
-    const obvious = []; obviousSels.forEach(sel => obvious.push(...document.querySelectorAll(sel)));
+    const obvious = [];
+    obviousSels.forEach((sel) =>
+      obvious.push(...document.querySelectorAll(sel))
+    );
 
     const nodes = [];
-    const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_ELEMENT, null);
+    const walker = document.createTreeWalker(
+      document.body || document.documentElement,
+      NodeFilter.SHOW_ELEMENT,
+      null
+    );
     while (walker.nextNode()) {
-      const el = walker.currentNode; const tn = el.tagName;
-      if (tn === 'SCRIPT' || tn === 'STYLE' || tn === 'NOSCRIPT' || tn === 'TEMPLATE') continue;
-      const txt = elementText(el); if (!txt || txt.length > 400) continue;
+      const el = walker.currentNode;
+      const tn = el.tagName;
+      if (
+        tn === "SCRIPT" ||
+        tn === "STYLE" ||
+        tn === "NOSCRIPT" ||
+        tn === "TEMPLATE"
+      )
+        continue;
+      const txt = elementText(el);
+      if (!txt || txt.length > 400) continue;
       if (CURRENCY_RX.test(txt)) nodes.push(el);
     }
     const candidates = [...new Set([...obvious, ...nodes])];
     let best = { score: 0, price: null, el: null };
     for (const el of candidates) {
       const s = scoreElementForTotal(el);
-      if (s.score > best.score && s.price) best = { score: s.score, price: s.price, el };
+      if (s.score > best.score && s.price)
+        best = { score: s.score, price: s.price, el };
     }
     if (!best.price) {
-      const containerSel = SUMMARY_CONTAINER_HINTS.map(h => `[class*="${h}"], [id*="${h}"]`).join(',');
-      const containers = containerSel ? [...document.querySelectorAll(containerSel)] : [];
+      const containerSel = SUMMARY_CONTAINER_HINTS.map(
+        (h) => `[class*="${h}"], [id*="${h}"]`
+      ).join(",");
+      const containers = containerSel
+        ? [...document.querySelectorAll(containerSel)]
+        : [];
       let maxPrice = null;
       for (const c of containers) {
-        const prices = (elementText(c).match(new RegExp(CURRENCY_RX, 'gi')) || []).map(extractPrice).filter(Boolean);
-        for (const p of prices) if (!maxPrice || (p.amount || 0) > (maxPrice.amount || 0)) maxPrice = p;
+        const prices = (
+          elementText(c).match(new RegExp(CURRENCY_RX, "gi")) || []
+        )
+          .map(extractPrice)
+          .filter(Boolean);
+        for (const p of prices)
+          if (!maxPrice || (p.amount || 0) > (maxPrice.amount || 0))
+            maxPrice = p;
       }
       if (maxPrice) best = { score: 1, price: maxPrice, el: null };
     }
     return best.price
-      ? { amount: best.price.amount, currency: best.price.currency, rawText: best.price.raw, source: best.el ? 'keyword+currency' : 'container-fallback' }
+      ? {
+          amount: best.price.amount,
+          currency: best.price.currency,
+          rawText: best.price.raw,
+          source: best.el ? "keyword+currency" : "container-fallback",
+        }
       : null;
   }
 
   // ---------- LIVE BEHAVIOR SAMPLERS ----------
-  const keyTimes = []; let lastKeyTime = 0;
-  addEventListener('keydown', () => {
-    const t = performance?.now?.() ?? Date.now();
-    if (lastKeyTime) keyTimes.push(t - lastKeyTime);
-    lastKeyTime = t;
-  }, { passive: true, capture: true });
-  addEventListener('blur', () => { lastKeyTime = 0; }, { passive: true });
+  const keyTimes = [];
+  let lastKeyTime = 0;
+  addEventListener(
+    "keydown",
+    () => {
+      const t = performance?.now?.() ?? Date.now();
+      if (lastKeyTime) keyTimes.push(t - lastKeyTime);
+      lastKeyTime = t;
+    },
+    { passive: true, capture: true }
+  );
+  addEventListener(
+    "blur",
+    () => {
+      lastKeyTime = 0;
+    },
+    { passive: true }
+  );
 
   const pressureSamples = [];
-  function pushPressureSample(v){ if (Number.isFinite(v)) { pressureSamples.push(v); if (pressureSamples.length > 500) pressureSamples.shift(); } }
-  addEventListener('pointerdown', (e) => {
-    if (typeof e.pressure === 'number') {
-      if (e.pointerType === 'mouse' && !e.buttons) return;
-      pushPressureSample(e.pressure);
+  function pushPressureSample(v) {
+    if (Number.isFinite(v)) {
+      pressureSamples.push(v);
+      if (pressureSamples.length > 500) pressureSamples.shift();
     }
-  }, { passive: true });
-  addEventListener('pointermove', (e) => {
-    if (typeof e.pressure === 'number') {
-      if (e.pointerType === 'mouse' && !e.buttons) return;
-      pushPressureSample(e.pressure);
-    }
-  }, { passive: true });
+  }
+  addEventListener(
+    "pointerdown",
+    (e) => {
+      if (typeof e.pressure === "number") {
+        if (e.pointerType === "mouse" && !e.buttons) return;
+        pushPressureSample(e.pressure);
+      }
+    },
+    { passive: true }
+  );
+  addEventListener(
+    "pointermove",
+    (e) => {
+      if (typeof e.pressure === "number") {
+        if (e.pointerType === "mouse" && !e.buttons) return;
+        pushPressureSample(e.pressure);
+      }
+    },
+    { passive: true }
+  );
 
-  const scrollDeltas = []; let _sx = window.scrollX||0; let _sy = window.scrollY||0;
-  addEventListener('wheel', (e) => {
-    scrollDeltas.push({ t: Date.now(), dx: Math.round(e.deltaX), dy: Math.round(e.deltaY) });
-    if (scrollDeltas.length > 500) scrollDeltas.shift();
-  }, { passive: true });
-  addEventListener('scroll', () => {
-    const nx = window.scrollX||0, ny = window.scrollY||0;
-    const dx = Math.round(nx - _sx), dy = Math.round(ny - _sy);
-    if (dx !== 0 || dy !== 0) {
-      scrollDeltas.push({ t: Date.now(), dx, dy });
+  const scrollDeltas = [];
+  let _sx = window.scrollX || 0;
+  let _sy = window.scrollY || 0;
+  addEventListener(
+    "wheel",
+    (e) => {
+      scrollDeltas.push({
+        t: Date.now(),
+        dx: Math.round(e.deltaX),
+        dy: Math.round(e.deltaY),
+      });
       if (scrollDeltas.length > 500) scrollDeltas.shift();
-      _sx = nx; _sy = ny;
-    }
-  }, { passive: true });
+    },
+    { passive: true }
+  );
+  addEventListener(
+    "scroll",
+    () => {
+      const nx = window.scrollX || 0,
+        ny = window.scrollY || 0;
+      const dx = Math.round(nx - _sx),
+        dy = Math.round(ny - _sy);
+      if (dx !== 0 || dy !== 0) {
+        scrollDeltas.push({ t: Date.now(), dx, dy });
+        if (scrollDeltas.length > 500) scrollDeltas.shift();
+        _sx = nx;
+        _sy = ny;
+      }
+    },
+    { passive: true }
+  );
 
-  const mousePositions = []; const MP_MAX = 4000;
-  let _lastMx = null, _lastMy = null, _lastMt = 0;
+  const mousePositions = [];
+  const MP_MAX = 4000;
+  let _lastMx = null,
+    _lastMy = null,
+    _lastMt = 0;
   function pushMouse(x, y) {
     const t = performance?.now?.() ?? Date.now();
     let v = 0;
@@ -203,62 +339,132 @@ window.addEventListener('load', async () => {
       const dt = (t - _lastMt) / 1000;
       if (dt > 0) v = Math.hypot(x - _lastMx, y - _lastMy) / dt;
     }
-    _lastMx = x; _lastMy = y; _lastMt = t;
-    mousePositions.push({ t: Math.round(t), x: Math.round(x), y: Math.round(y), v: Math.round(v) });
+    _lastMx = x;
+    _lastMy = y;
+    _lastMt = t;
+    mousePositions.push({
+      t: Math.round(t),
+      x: Math.round(x),
+      y: Math.round(y),
+      v: Math.round(v),
+    });
     if (mousePositions.length > MP_MAX) mousePositions.shift();
   }
-  addEventListener('mousemove', (e) => { pushMouse(e.clientX, e.clientY); }, { passive: true });
+  addEventListener(
+    "mousemove",
+    (e) => {
+      pushMouse(e.clientX, e.clientY);
+    },
+    { passive: true }
+  );
 
   const rateCounters = { clicks: 0, inputs: 0, navStart: Date.now() };
-  addEventListener('click', () => { rateCounters.clicks++; }, { passive: true });
-  ;['input','textarea','select'].forEach(sel => {
-    document.querySelectorAll(sel).forEach(el => {
-      el.addEventListener('input', () => { rateCounters.inputs++; }, { passive: true });
+  addEventListener(
+    "click",
+    () => {
+      rateCounters.clicks++;
+    },
+    { passive: true }
+  );
+  ["input", "textarea", "select"].forEach((sel) => {
+    document.querySelectorAll(sel).forEach((el) => {
+      el.addEventListener(
+        "input",
+        () => {
+          rateCounters.inputs++;
+        },
+        { passive: true }
+      );
     });
   });
 
   // Summarizers (on-demand)
-  function summarizeCadence(arr){
-    if(!arr.length) return { n:0 };
-    const n=arr.length, sum=arr.reduce((a,b)=>a+b,0), mean=sum/n, v=arr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/n;
-    return { n, mean:+mean.toFixed(2), std:+Math.sqrt(v).toFixed(2) };
+  function summarizeCadence(arr) {
+    if (!arr.length) return { n: 0 };
+    const n = arr.length,
+      sum = arr.reduce((a, b) => a + b, 0),
+      mean = sum / n,
+      v = arr.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n;
+    return { n, mean: +mean.toFixed(2), std: +Math.sqrt(v).toFixed(2) };
   }
-  function summarizeArray(arr){
-    if(!arr.length) return { n:0 };
-    const n=arr.length, sum=arr.reduce((a,b)=>a+b,0), mean=sum/n, min=Math.min(...arr), max=Math.max(...arr);
-    return { n, mean:+mean.toFixed(3), min:+min.toFixed(3), max:+max.toFixed(3) };
+  function summarizeArray(arr) {
+    if (!arr.length) return { n: 0 };
+    const n = arr.length,
+      sum = arr.reduce((a, b) => a + b, 0),
+      mean = sum / n,
+      min = Math.min(...arr),
+      max = Math.max(...arr);
+    return {
+      n,
+      mean: +mean.toFixed(3),
+      min: +min.toFixed(3),
+      max: +max.toFixed(3),
+    };
   }
-  function summarizeScroll(arr){
-    if(!arr.length) return { n:0 };
-    const n=arr.length, totalY=arr.reduce((a,b)=>a+Math.abs(b.dy),0), totalX=arr.reduce((a,b)=>a+Math.abs(b.dx),0);
+  function summarizeScroll(arr) {
+    if (!arr.length) return { n: 0 };
+    const n = arr.length,
+      totalY = arr.reduce((a, b) => a + Math.abs(b.dy), 0),
+      totalX = arr.reduce((a, b) => a + Math.abs(b.dx), 0);
     return { n, totalY, totalX };
   }
-  function summarizeMousePositions(arr){
-    if(!arr.length) return { n:0 };
-    const n = arr.length; let sumV = 0, maxV = 0;
-    for (let i=0;i<n;i++){ const v = arr[i].v||0; sumV += v; if (v>maxV) maxV=v; }
-    const avgV = sumV / n; const last = arr[n-1];
-    return { n, lastX:last.x, lastY:last.y, lastV:last.v, avgV:+avgV.toFixed(2), maxV };
+  function summarizeMousePositions(arr) {
+    if (!arr.length) return { n: 0 };
+    const n = arr.length;
+    let sumV = 0,
+      maxV = 0;
+    for (let i = 0; i < n; i++) {
+      const v = arr[i].v || 0;
+      sumV += v;
+      if (v > maxV) maxV = v;
+    }
+    const avgV = sumV / n;
+    const last = arr[n - 1];
+    return {
+      n,
+      lastX: last.x,
+      lastY: last.y,
+      lastV: last.v,
+      avgV: +avgV.toFixed(2),
+      maxV,
+    };
   }
-  function summarizeRates(){
-    const secs = Math.max(1, (Date.now()-rateCounters.navStart)/1000);
-    return { clicksPerMin:+(rateCounters.clicks/(secs/60)).toFixed(2), inputsPerMin:+(rateCounters.inputs/(secs/60)).toFixed(2), timeOnPageSecs:Math.round(secs) };
+  function summarizeRates() {
+    const secs = Math.max(1, (Date.now() - rateCounters.navStart) / 1000);
+    return {
+      clicksPerMin: +(rateCounters.clicks / (secs / 60)).toFixed(2),
+      inputsPerMin: +(rateCounters.inputs / (secs / 60)).toFixed(2),
+      timeOnPageSecs: Math.round(secs),
+    };
   }
 
   // ---------- Live session snapshot (also cache to currentSession) ----------
   async function writeCurrentSnapshot() {
     const total = findCheckoutTotal();
     const snapshot = {
-      meta: { id: 'modal-live', startedAt: new Date().toISOString(), url: location.href, viewport: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio||1 }, ua: navigator.userAgent },
-      total: total ? { amount: total.amount, currency: total.currency, rawText: total.rawText, source: total.source } : null,
+      meta: {
+        id: "modal-live",
+        startedAt: new Date().toISOString(),
+        url: location.href,
+        viewport: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1 },
+        ua: navigator.userAgent,
+      },
+      total: total
+        ? {
+            amount: total.amount,
+            currency: total.currency,
+            rawText: total.rawText,
+            source: total.source,
+          }
+        : null,
       mousePosition: summarizeMousePositions(mousePositions),
       cadence: summarizeCadence(keyTimes),
       pressure: summarizeArray(pressureSamples),
       scroll: summarizeScroll(scrollDeltas),
       rates: summarizeRates(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
-    await storageSet('currentSession', snapshot);
+    await storageSet("currentSession", snapshot);
     return snapshot;
   }
 
@@ -271,7 +477,7 @@ window.addEventListener('load', async () => {
   }
   function mad(arr, med) {
     if (!arr.length || !Number.isFinite(med)) return NaN;
-    const dev = arr.map(v => Math.abs(v - med));
+    const dev = arr.map((v) => Math.abs(v - med));
     return median(dev);
   }
   function winsorize(arr, p = 0.05) {
@@ -281,13 +487,13 @@ window.addEventListener('load', async () => {
     const hiIdx = Math.ceil((1 - p) * (a.length - 1));
     const lo = a[loIdx];
     const hi = a[hiIdx];
-    return a.map(v => clamp(v, lo, hi));
+    return a.map((v) => clamp(v, lo, hi));
   }
 
   // ---------- UI behavior constants ----------
   const VISIBLE_COUNT = 2;
-  const ROW_H = 54;            // bigger rows for readability
-  const ROW_GAP = 12;          // wider margin between rows
+  const ROW_H = 54; // bigger rows for readability
+  const ROW_GAP = 12; // wider margin between rows
   const ENTER_MS = 140;
   const EXIT_MS = 220;
   const HOLD_MIN = 550;
@@ -299,19 +505,21 @@ window.addEventListener('load', async () => {
     // pricing handled by direct points (dominant contributor)
     useHistory: 20,
     biometrics: 30,
-    otherChecks: 25
+    otherChecks: 25,
   };
   const DISPLAY_MAX = 95;
 
   // ---------- metric helpers (pull live each time) ----------
   const METRICS = {
     credentialsHeadless: () => {
-      const ua = navigator.userAgent || '';
-      const webdriver = (navigator.webdriver === true);
+      const ua = navigator.userAgent || "";
+      const webdriver = navigator.webdriver === true;
       let hasWebGL = false;
       try {
-        const c = document.createElement('canvas');
-        hasWebGL = !!(c.getContext('webgl') || c.getContext('experimental-webgl'));
+        const c = document.createElement("canvas");
+        hasWebGL = !!(
+          c.getContext("webgl") || c.getContext("experimental-webgl")
+        );
       } catch {}
       let risk = 0.12;
       if (webdriver) risk += 0.45;
@@ -331,7 +539,7 @@ window.addEventListener('load', async () => {
       if (!total || !Number.isFinite(total.amount)) return 0;
 
       // Log out the detected price (as requested earlier)
-      console.log('[Modal] Detected checkout total:', total);
+      console.log("[Modal] Detected checkout total:", total);
 
       const amt = total.amount;
       let points = 0;
@@ -346,14 +554,14 @@ window.addEventListener('load', async () => {
 
       const purchases = await getPurchaseHistory();
       const hist = (Array.isArray(purchases) ? purchases : [])
-        .map(p => safeNum(p?.amount, NaN))
+        .map((p) => safeNum(p?.amount, NaN))
         .filter(Number.isFinite);
 
       if (hist.length >= 3 && amt >= 1000) {
         const w = winsorize(hist, 0.05);
         const med = median(w);
         const MAD = mad(w, med) || 0;
-        const robustSigma = (MAD * 1.4826) || 1;
+        const robustSigma = MAD * 1.4826 || 1;
         const diff = amt - med;
         if (diff > 0) {
           const z = diff / robustSigma;
@@ -390,22 +598,22 @@ window.addEventListener('load', async () => {
       const mpos = summarizeMousePositions(mousePositions);
       const pres = summarizeArray(pressureSamples);
 
-      let cadRisk = 0.10;
+      let cadRisk = 0.1;
       if (Number.isFinite(cad.std)) {
-        if (cad.std < 15) cadRisk = 0.40;
+        if (cad.std < 15) cadRisk = 0.4;
         else if (cad.std > 300) cadRisk = 0.36;
         else if (cad.std > 170) cadRisk = 0.22;
         else cadRisk = 0.12;
       }
 
-      let mouseRisk = 0.10;
+      let mouseRisk = 0.1;
       if (Number.isFinite(mpos.avgV) && mpos.avgV < 30) mouseRisk += 0.08;
-      if (Number.isFinite(mpos.maxV) && mpos.maxV > 8000) mouseRisk += 0.10;
+      if (Number.isFinite(mpos.maxV) && mpos.maxV > 8000) mouseRisk += 0.1;
 
       let pressRisk = 0.08;
       if (Number.isFinite(pres.mean) && pres.mean === 0) pressRisk += 0.06;
 
-      return clamp((cadRisk * 0.5) + (mouseRisk * 0.3) + (pressRisk * 0.2), 0, 1);
+      return clamp(cadRisk * 0.5 + mouseRisk * 0.3 + pressRisk * 0.2, 0, 1);
     },
 
     otherChecks: () => {
@@ -413,91 +621,91 @@ window.addEventListener('load', async () => {
       const totalY = Math.abs(safeNum(scr.totalY, 0));
       const n = safeNum(scr.n, 0);
       let risk = 0.08;
-      if (n === 0 && totalY === 0) risk += 0.10;
-      if (n > 0 && totalY < 200)  risk += 0.06;
+      if (n === 0 && totalY === 0) risk += 0.1;
+      if (n > 0 && totalY < 200) risk += 0.06;
       const mpN = safeNum(summarizeMousePositions(mousePositions).n, 0);
       if (mpN > 300 && totalY < 100) risk += 0.06;
       return clamp(risk, 0, 1);
-    }
+    },
   };
 
   // Labels shown in the UI
   const info_items = [
-    'Credentials',
-    'Pricing History',
-    'Use History',
-    'Behavioural Biometrics',
-    'Other Checks'
+    "Credentials",
+    "Pricing History",
+    "Use History",
+    "Behavioural Biometrics",
+    "Other Checks",
   ];
 
   // Mapping visible rows → metric keys
   const INFO_TO_METRIC_KEYS = [
-    'credentialsHeadless',
-    'pricingHistoryPoints', // special: returns direct points (exponential, max 50)
-    'useHistory',
-    'biometrics',
-    'otherChecks'
+    "credentialsHeadless",
+    "pricingHistoryPoints", // special: returns direct points (exponential, max 50)
+    "useHistory",
+    "biometrics",
+    "otherChecks",
   ];
 
   // ---------- UI build ----------
   const attachModal = async () => {
-    const bg = document.createElement('bg-component');
-    const modal = document.createElement('modal-component');
+    const bg = document.createElement("bg-component");
+    const modal = document.createElement("modal-component");
 
-    const title = document.createElement('h2');
+    const title = document.createElement("h2");
     // title.textContent = 'VISA';
 
-    const container = document.createElement('div');
-    container.className = 'container';
+    const container = document.createElement("div");
+    container.className = "container";
 
-    const risk_score = document.createElement('div');
-    risk_score.className = 'risk-score';
+    const risk_score = document.createElement("div");
+    risk_score.className = "risk-score";
 
-    const score_value = document.createElement('span');
-    score_value.className = 'score-value';
-    score_value.textContent = '0';
+    const score_value = document.createElement("span");
+    score_value.className = "score-value";
+    score_value.textContent = "0";
 
-    const score_label = document.createElement('span');
-    score_label.className = 'score-label';
-    score_label.textContent = 'Transaction Risk Score';
+    const score_label = document.createElement("span");
+    score_label.className = "score-label";
+    score_label.textContent = "Transaction Risk Score";
 
-    const analyze_risk = document.createElement('div');
-    analyze_risk.className = 'analyze-risk';
+    const analyze_risk = document.createElement("div");
+    analyze_risk.className = "analyze-risk";
 
-    const analyze_label = document.createElement('span');
-    analyze_label.className = 'analyze-label';
-    analyze_label.textContent = 'Analyzing Risk';
+    const analyze_label = document.createElement("span");
+    analyze_label.className = "analyze-label";
+    analyze_label.textContent = "Analyzing Risk";
 
-    const analyze_list = document.createElement('div');
-    analyze_list.className = 'analyze-list windowed';
-    analyze_list.style.setProperty('--visible-count', String(VISIBLE_COUNT));
-    analyze_list.style.setProperty('--row-h', `${ROW_H}px`);
-    analyze_list.style.setProperty('--row-gap', `${ROW_GAP}px`);
+    const analyze_list = document.createElement("div");
+    analyze_list.className = "analyze-list windowed";
+    analyze_list.style.setProperty("--visible-count", String(VISIBLE_COUNT));
+    analyze_list.style.setProperty("--row-h", `${ROW_H}px`);
+    analyze_list.style.setProperty("--row-gap", `${ROW_GAP}px`);
 
     const itemNodes = [];
     const itemMap = new Map();
 
     const setItemRow = (node, row) => {
-      node.style.setProperty('--y', `${row * (ROW_H + ROW_GAP)}px`);
-      node.style.setProperty('--opacity', '1');
-      node.style.removeProperty('--scale');
+      node.style.setProperty("--y", `${row * (ROW_H + ROW_GAP)}px`);
+      node.style.setProperty("--opacity", "1");
+      node.style.removeProperty("--scale");
     };
 
-    info_items.forEach(item => {
-      const item_div = document.createElement('div');
-      item_div.className = 'info-item';
+    info_items.forEach((item) => {
+      const item_div = document.createElement("div");
+      item_div.className = "info-item";
 
-      const label = document.createElement('span');
-      label.className = 'info-title';
+      const label = document.createElement("span");
+      label.className = "info-title";
       label.textContent = item;
 
-      const dot = document.createElement('span');
-      dot.className = 'status-dot';
-      dot.setAttribute('aria-hidden', 'true');
+      const dot = document.createElement("span");
+      dot.className = "status-dot";
+      dot.setAttribute("aria-hidden", "true");
 
-      item_div.addEventListener('click', () => {
-        if (analyze_list.classList.contains('locked')) return;
-        item_div.classList.toggle('added');
+      item_div.addEventListener("click", () => {
+        if (analyze_list.classList.contains("locked")) return;
+        item_div.classList.toggle("added");
       });
 
       item_div.appendChild(label);
@@ -511,48 +719,48 @@ window.addEventListener('load', async () => {
     window.setInfoItemStatus = (name, isAdded = true) => {
       const node = itemMap.get(name);
       if (!node) return false;
-      node.classList.toggle('added', !!isAdded);
+      node.classList.toggle("added", !!isAdded);
       return true;
     };
 
     // ===== Completion overlay =====
-    const doneOverlay = document.createElement('div');
-    doneOverlay.className = 'done-overlay';
+    const doneOverlay = document.createElement("div");
+    doneOverlay.className = "done-overlay";
 
-    const doneSurface = document.createElement('div');
-    doneSurface.className = 'done-surface';
-    doneSurface.setAttribute('role', 'dialog');
-    doneSurface.setAttribute('aria-modal', 'true');
-    doneSurface.setAttribute('aria-label', 'Analysis Complete');
+    const doneSurface = document.createElement("div");
+    doneSurface.className = "done-surface";
+    doneSurface.setAttribute("role", "dialog");
+    doneSurface.setAttribute("aria-modal", "true");
+    doneSurface.setAttribute("aria-label", "Analysis Complete");
 
-    const doneCloseBtn = document.createElement('button');
-    doneCloseBtn.className = 'done-close-btn';
-    doneCloseBtn.type = 'button';
-    doneCloseBtn.setAttribute('aria-label', 'Close overlay');
-    doneCloseBtn.textContent = '×';
+    const doneCloseBtn = document.createElement("button");
+    doneCloseBtn.className = "done-close-btn";
+    doneCloseBtn.type = "button";
+    doneCloseBtn.setAttribute("aria-label", "Close overlay");
+    doneCloseBtn.textContent = "×";
 
-    const doneContent = document.createElement('div');
-    doneContent.className = 'done-content';
+    const doneContent = document.createElement("div");
+    doneContent.className = "done-content";
 
-    const doneTitle = document.createElement('img');
-    doneTitle.className = 'done-title';
-    doneTitle.src = await chrome.runtime.getURL('assets/images/visa-logo.png');
+    const doneTitle = document.createElement("img");
+    doneTitle.className = "done-title";
+    doneTitle.src = await chrome.runtime.getURL("assets/images/visa-logo.png");
 
-    const doneSubtitle = document.createElement('p');
-    doneSubtitle.className = 'done-subtitle';
-    doneSubtitle.textContent = 'Identity Verified';
+    const doneSubtitle = document.createElement("p");
+    doneSubtitle.className = "done-subtitle";
+    doneSubtitle.textContent = "Identity Verified";
 
-    const doneCheck = document.createElement('img');
-    doneCheck.className = 'done-check';
-    doneCheck.src = await chrome.runtime.getURL('assets/images/checkmark.png');
+    const doneCheck = document.createElement("img");
+    doneCheck.className = "done-check";
+    doneCheck.src = await chrome.runtime.getURL("assets/images/checkmark.png");
 
-    const doneDetails = document.createElement('p');
-    doneDetails.className = 'done-details';
-    doneDetails.textContent = 'how was this calculated?';
+    const doneDetails = document.createElement("p");
+    doneDetails.className = "done-details";
+    doneDetails.textContent = "how was this calculated?";
 
-    doneDetails.addEventListener('click', () => {
-      console.log('Details clicked');
-      doneOverlay.classList.remove('show');
+    doneDetails.addEventListener("click", () => {
+      console.log("Details clicked");
+      doneOverlay.classList.remove("show");
     });
 
     doneSubtitle.appendChild(doneCheck);
@@ -565,25 +773,27 @@ window.addEventListener('load', async () => {
     doneOverlay.appendChild(doneSurface);
 
     // ===== Top Risk block =====
-    const topItems = document.createElement('div');
-    topItems.className = 'top-items';
+    const topItems = document.createElement("div");
+    topItems.className = "top-items";
 
-    const topLabel = document.createElement('span');
-    topLabel.className = 'top-label';
-    topLabel.textContent = 'Top Risk Factors';
+    const topLabel = document.createElement("span");
+    topLabel.className = "top-label";
+    topLabel.textContent = "Top Risk Factors";
 
-    const topRiskList = document.createElement('div'); // unique var name to avoid redeclare
-    topRiskList.className = 'top-risk-list';
+    const topRiskList = document.createElement("div"); // unique var name to avoid redeclare
+    topRiskList.className = "top-risk-list";
 
-    ['Unusual Behavior', 'Amount unusually high'].forEach(async (item) => {
-      const item_div = document.createElement('div');
-      item_div.className = 'top-risk-item';
-      const label = document.createElement('span');
-      label.className = 'top-risk-title';
+    ["Unusual Behavior", "Amount unusually high"].forEach(async (item) => {
+      const item_div = document.createElement("div");
+      item_div.className = "top-risk-item";
+      const label = document.createElement("span");
+      label.className = "top-risk-title";
       label.textContent = item;
-      const warning_icon = document.createElement('img');
-      warning_icon.className = 'warning-icon';
-      warning_icon.src = await chrome.runtime.getURL('assets/images/warning-icon.png');
+      const warning_icon = document.createElement("img");
+      warning_icon.className = "warning-icon";
+      warning_icon.src = await chrome.runtime.getURL(
+        "assets/images/warning-icon.png"
+      );
       item_div.appendChild(warning_icon);
       item_div.appendChild(label);
       topRiskList.appendChild(item_div);
@@ -593,22 +803,141 @@ window.addEventListener('load', async () => {
     topItems.appendChild(topRiskList);
 
     // ===== Email Authentication (4-digit code) =====
-    const email_authentication = document.createElement('div');
-    email_authentication.className = 'email-authentication'; // visible toggled by JS
-    email_authentication.style.pointerEvents = 'auto';
+    const email_authentication = document.createElement("div");
+    email_authentication.className = "email-authentication"; // visible toggled by JS
+    email_authentication.style.pointerEvents = "auto";
 
-    const email_label = document.createElement('span');
-    email_label.className = 'email-label';
-    email_label.textContent = 'Authentication Required';
+    // 🔴 STEP 1: GENERATE 4-DIGIT VERIFICATION CODE HERE
+    // Add this at the top of the email_authentication section:
+    const verificationCode = Math.floor(1000 + Math.random() * 9000); // generates 1000-9999
+    console.log("Generated verification code:", verificationCode);
+    // 🔴 STEP 2: SEND EMAIL WITH VERIFICATION CODE HERE
+    // After generating the code, send email via Resend API:
+    //
+    // async function sendVerificationEmail() {
+    // try {
+    const emailHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 0;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <!-- Header with logo/image (optional) -->
+                  <tr>
+                    <td style="padding: 40px 40px 20px 40px; text-align: center;">
+                      <!-- You can add an image here -->
+                      <!-- <img src="https://your-domain.com/logo.png" alt="Logo" style="width: 120px; height: auto;"> -->
+                      <h1 style="margin: 0; color: #1a1a1a; font-size: 28px; font-weight: 600;">Verification Code</h1>
+                    </td>
+                  </tr>
+                  
+                  <!-- Message content -->
 
-    const email_subtitle = document.createElement('span');
-    email_subtitle.className = 'email-subtitle';
-    email_subtitle.textContent = 'An email has been sent to your registered address.';
+                  
+                  <!-- Verification code box -->
+                  <tr>
+                    <td style="padding: 0 40px 30px 40px;" align="center">
+                      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 30px; display: inline-block;">
+                        <p style="margin: 0 0 10px 0; color: #ffffff; font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase;">Your verification code</p>
+                        <p style="margin: 0; color: #ffffff; font-size: 42px; font-weight: 700; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                          ${verificationCode}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  <!-- Additional info -->
+                  <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                      <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 20px; text-align: center;">
+                        This code will expire in 10 minutes. If you didn't request this code, please contact Visa support as there may be fraudulent activity.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
+                      <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                        © 2025 Visa Verify. All rights reserved.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `;
 
-    const email_code = document.createElement('div');
-    email_code.className = 'email-code';
-    email_code.setAttribute('role', 'group');
-    email_code.setAttribute('aria-label', 'Enter 4 digit verification code');
+    async function sendVerificationEmail() {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          action: "sendVerificationEmail",
+          code: verificationCode,
+          email: "nw55699@gmail.com",
+          apiKey: "",
+        });
+        console.log("Email sent:", response);
+
+        if (!response.success) {
+          console.error("Failed to send email:", response.error);
+        }
+      } catch (error) {
+        console.error("Error sending email:", error);
+        return;
+      }
+
+      console.log("Email sent:", response);
+    }
+
+    //   const response = await fetch("https://api.resend.com/emails", {
+    //     method: "POST",
+    //     headers: {
+    //       Authorization: `Bearer ${apiKey}`,
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({
+    //       from: "onboarding@resend.dev",
+    //       to: "nw55699@gmail.com",
+    //       subject: "Password Verification Code from Visa Verify",
+    //       html: emailHTML,
+    //     }),
+    //   });
+
+    //   const data = await response.json();
+    //   console.log("Email API response:", data);
+
+    //   if (response.ok) {
+    //     console.log("Email sent successfully:", data);
+    //   } else {
+    //     console.error(`Error: ${data.message || "Failed to send email"}`);
+    //   }
+    // } catch (error) {
+    //   console.error("Error sending email:", error);
+    // }
+    // }
+
+    const email_label = document.createElement("span");
+    email_label.className = "email-label";
+    email_label.textContent = "Authentication Required";
+
+    const email_subtitle = document.createElement("span");
+    email_subtitle.className = "email-subtitle";
+    email_subtitle.textContent =
+      "An email has been sent to your registered address.";
+
+    const email_code = document.createElement("div");
+    email_code.className = "email-code";
+    email_code.setAttribute("role", "group");
+    email_code.setAttribute("aria-label", "Enter 4 digit verification code");
 
     const CODE_LEN = 4;
     const cells = [];
@@ -623,9 +952,16 @@ window.addEventListener('load', async () => {
     function isDigitKey(e) {
       return (
         (e.key && /^\d$/.test(e.key)) ||
-        e.code === 'Numpad0' || e.code === 'Numpad1' || e.code === 'Numpad2' ||
-        e.code === 'Numpad3' || e.code === 'Numpad4' || e.code === 'Numpad5' ||
-        e.code === 'Numpad6' || e.code === 'Numpad7' || e.code === 'Numpad8' || e.code === 'Numpad9'
+        e.code === "Numpad0" ||
+        e.code === "Numpad1" ||
+        e.code === "Numpad2" ||
+        e.code === "Numpad3" ||
+        e.code === "Numpad4" ||
+        e.code === "Numpad5" ||
+        e.code === "Numpad6" ||
+        e.code === "Numpad7" ||
+        e.code === "Numpad8" ||
+        e.code === "Numpad9"
       );
     }
 
@@ -641,37 +977,46 @@ window.addEventListener('load', async () => {
     }
 
     for (let i = 0; i < CODE_LEN; i++) {
-      const inp = document.createElement('input');
-      inp.className = 'code-cell';
-      inp.type = 'text';
-      inp.inputMode = 'numeric';
-      inp.autocomplete = 'one-time-code';
-      inp.setAttribute('pattern', '\\d*');
-      inp.setAttribute('maxlength', '1');
-      inp.setAttribute('aria-label', `Digit ${i + 1}`);
-      inp.setAttribute('data-index', String(i));
+      const inp = document.createElement("input");
+      inp.className = "code-cell";
+      inp.type = "text";
+      inp.inputMode = "numeric";
+      inp.autocomplete = "one-time-code";
+      inp.setAttribute("pattern", "\\d*");
+      inp.setAttribute("maxlength", "1");
+      inp.setAttribute("aria-label", `Digit ${i + 1}`);
+      inp.setAttribute("data-index", String(i));
       inp.tabIndex = 0;
-      inp.value = '';
+      inp.value = "";
 
       // Keep events local to the input (don’t bubble to backdrop)
-      ['mousedown','mouseup','click','keydown','keyup','input','paste','beforeinput'].forEach(ev =>
+      [
+        "mousedown",
+        "mouseup",
+        "click",
+        "keydown",
+        "keyup",
+        "input",
+        "paste",
+        "beforeinput",
+      ].forEach((ev) =>
         inp.addEventListener(ev, (e) => e.stopPropagation(), true)
       );
 
       // Accept only digits on insert (covers mobile, IME, paste granular insertions)
-      inp.addEventListener('beforeinput', (e) => {
-        if (e.inputType && e.inputType.startsWith('delete')) return;
+      inp.addEventListener("beforeinput", (e) => {
+        if (e.inputType && e.inputType.startsWith("delete")) return;
         if (e.data && !/^\d$/.test(e.data)) {
           e.preventDefault();
         }
       });
 
       // INPUT: filter to one digit, auto-advance when filled
-      inp.addEventListener('input', (e) => {
+      inp.addEventListener("input", (e) => {
         const el = e.currentTarget;
-        const idx = Number(el.getAttribute('data-index'));
-        const m = (el.value || '').match(/\d/);
-        el.value = m ? m[0] : '';
+        const idx = Number(el.getAttribute("data-index"));
+        const m = (el.value || "").match(/\d/);
+        el.value = m ? m[0] : "";
 
         if (el.value) {
           if (idx < CODE_LEN - 1) focusCell(idx + 1);
@@ -681,34 +1026,34 @@ window.addEventListener('load', async () => {
       });
 
       // KEYDOWN: handle Backspace/Delete + direct digit typing (fast advance)
-      inp.addEventListener('keydown', (e) => {
-        const idx = Number(e.currentTarget.getAttribute('data-index'));
+      inp.addEventListener("keydown", (e) => {
+        const idx = Number(e.currentTarget.getAttribute("data-index"));
 
-        if (e.key === 'Backspace') {
+        if (e.key === "Backspace") {
           if (e.currentTarget.value) {
-            e.currentTarget.value = '';
+            e.currentTarget.value = "";
           } else if (idx > 0) {
             const prev = cells[idx - 1];
-            prev.value = '';
+            prev.value = "";
             focusCell(idx - 1);
           }
           e.preventDefault();
           return;
         }
 
-        if (e.key === 'Delete') {
-          e.currentTarget.value = '';
+        if (e.key === "Delete") {
+          e.currentTarget.value = "";
           e.preventDefault();
           return;
         }
 
-        if (e.key === 'ArrowLeft') {
+        if (e.key === "ArrowLeft") {
           focusCell(idx - 1);
           e.preventDefault();
           return;
         }
 
-        if (e.key === 'ArrowRight') {
+        if (e.key === "ArrowRight") {
           focusCell(idx + 1);
           e.preventDefault();
           return;
@@ -717,7 +1062,9 @@ window.addEventListener('load', async () => {
         // If it's a digit key, set immediately and advance (smoother UX)
         if (isDigitKey(e)) {
           e.preventDefault();
-          const digit = e.key.match(/\d/) ? e.key : String(e.code.replace('Numpad',''));
+          const digit = e.key.match(/\d/)
+            ? e.key
+            : String(e.code.replace("Numpad", ""));
           if (/^\d$/.test(digit)) {
             setDigitAndAdvance(idx, digit);
             maybeFireComplete();
@@ -728,10 +1075,12 @@ window.addEventListener('load', async () => {
       });
 
       // Paste a multi-digit code anywhere
-      inp.addEventListener('paste', (e) => {
+      inp.addEventListener("paste", (e) => {
         e.preventDefault();
-        const idx = Number(e.currentTarget.getAttribute('data-index'));
-        const text = (e.clipboardData?.getData('text') || '').replace(/\D/g, '').slice(0, CODE_LEN);
+        const idx = Number(e.currentTarget.getAttribute("data-index"));
+        const text = (e.clipboardData?.getData("text") || "")
+          .replace(/\D/g, "")
+          .slice(0, CODE_LEN);
         if (!text) return;
         for (let i2 = 0; i2 < text.length && idx + i2 < CODE_LEN; i2++) {
           cells[idx + i2].value = text[i2];
@@ -744,14 +1093,24 @@ window.addEventListener('load', async () => {
       email_code.appendChild(inp);
     }
 
-    const getEmailCode = () => cells.map(c => c.value || '').join('');
+    const getEmailCode = () => cells.map((c) => c.value || "").join("");
     const setEmailCode = (code) => {
-      const digits = String(code || '').replace(/\D/g, '').slice(0, CODE_LEN).padEnd(CODE_LEN, '');
-      for (let i = 0; i < CODE_LEN; i++) cells[i].value = digits[i] || '';
-      focusCell(digits.indexOf('') === -1 ? CODE_LEN - 1 : Math.max(0, digits.indexOf('')));
+      const digits = String(code || "")
+        .replace(/\D/g, "")
+        .slice(0, CODE_LEN)
+        .padEnd(CODE_LEN, "");
+      for (let i = 0; i < CODE_LEN; i++) cells[i].value = digits[i] || "";
+      focusCell(
+        digits.indexOf("") === -1
+          ? CODE_LEN - 1
+          : Math.max(0, digits.indexOf(""))
+      );
       maybeFireComplete();
     };
-    const clearEmailCode = () => { cells.forEach(c => c.value = ''); focusCell(0); };
+    const clearEmailCode = () => {
+      cells.forEach((c) => (c.value = ""));
+      focusCell(0);
+    };
 
     window.getEmailCode = getEmailCode;
     window.setEmailCode = setEmailCode;
@@ -760,11 +1119,24 @@ window.addEventListener('load', async () => {
 
     function maybeFireComplete() {
       const code = getEmailCode();
-      if (code.length === CODE_LEN && !code.includes('')) {
-        if (typeof window.onEmailCodeComplete === 'function') {
+      if (code.length === CODE_LEN && !code.includes("")) {
+        // 🔴 STEP 3: VERIFY CODE HERE
+        // When user completes entering the code, check if it matches:
+        const enteredCode = parseInt(code);
+        if (enteredCode === verificationCode) {
+          console.log("✓ Verification successful!");
+          // Allow purchase to continue
+          // Maybe: canClose = true; closeModal();
+        } else {
+          console.log("✗ Invalid code");
+          // Show error message
+          // Clear the input: clearEmailCode();
+          // Maybe show error text below inputs
+        }
+        if (typeof window.onEmailCodeComplete === "function") {
           window.onEmailCodeComplete(code);
         } else {
-          console.log('Email code entered:', code);
+          console.log("Email code entered:", code);
         }
       }
     }
@@ -779,11 +1151,13 @@ window.addEventListener('load', async () => {
     analyze_risk.appendChild(analyze_label);
     analyze_risk.appendChild(analyze_list);
 
-    const showTopItems = (show) => { topItems.style.display = show ? 'flex' : 'none'; };
+    const showTopItems = (show) => {
+      topItems.style.display = show ? "flex" : "none";
+    };
 
     // initial states
-    showTopItems(false);                       // hidden during analysis
-    email_authentication.style.display = 'none'; // controlled at the end
+    showTopItems(false); // hidden during analysis
+    email_authentication.style.display = "none"; // controlled at the end
 
     container.appendChild(risk_score);
     container.appendChild(analyze_risk);
@@ -801,19 +1175,27 @@ window.addEventListener('load', async () => {
 
     const closeModal = () => {
       if (!canClose) return; // hard block when high-risk
-      bg.removeEventListener('click', onBackdropClick);
-      document.removeEventListener('keydown', onKey);
-      doneCloseBtn.removeEventListener('click', onCloseBtn);
-      try { bg.remove(); } catch {}
+      bg.removeEventListener("click", onBackdropClick);
+      document.removeEventListener("keydown", onKey);
+      doneCloseBtn.removeEventListener("click", onCloseBtn);
+      try {
+        bg.remove();
+      } catch {}
     };
 
-    const onBackdropClick = (e) => { if (canClose && e.target === bg) closeModal(); };
-    const onCloseBtn = () => { if (canClose) closeModal(); };
-    const onKey = (e) => { if (canClose && e.key === 'Escape') closeModal(); };
+    const onBackdropClick = (e) => {
+      if (canClose && e.target === bg) closeModal();
+    };
+    const onCloseBtn = () => {
+      if (canClose) closeModal();
+    };
+    const onKey = (e) => {
+      if (canClose && e.key === "Escape") closeModal();
+    };
 
-    bg.addEventListener('click', onBackdropClick);
-    doneCloseBtn.addEventListener('click', onCloseBtn);
-    document.addEventListener('keydown', onKey);
+    bg.addEventListener("click", onBackdropClick);
+    doneCloseBtn.addEventListener("click", onCloseBtn);
+    document.addEventListener("keydown", onKey);
 
     // ===== score update helpers (integer only, up to 95) =====
     let runningScore = 0;
@@ -825,20 +1207,23 @@ window.addEventListener('load', async () => {
 
     // inline color helpers (no CSS change needed)
     function setScoreColorGood() {
-      score_value.style.backgroundColor = '#D1FAE5'; // light green
-      score_value.style.color = '#065F46';
-      score_value.style.boxShadow = '0 4px 10px rgba(16,185,129,0.35)';
+      score_value.style.backgroundColor = "#D1FAE5"; // light green
+      score_value.style.color = "#065F46";
+      score_value.style.boxShadow = "0 4px 10px rgba(16,185,129,0.35)";
     }
     function setScoreColorBad() {
-      score_value.style.backgroundColor = '#FEE2E2'; // light red
-      score_value.style.color = '#7F1D1D';
-      score_value.style.boxShadow = '0 4px 10px rgba(239,68,68,0.35)';
+      score_value.style.backgroundColor = "#FEE2E2"; // light red
+      score_value.style.color = "#7F1D1D";
+      score_value.style.boxShadow = "0 4px 10px rgba(239,68,68,0.35)";
     }
 
     async function animateScoreTo(target, dur = 260) {
       const start = runningScore;
       const end = clamp(Math.round(target), 0, DISPLAY_MAX);
-      if (end === start || dur <= 0) { setScoreImmediate(end); return; }
+      if (end === start || dur <= 0) {
+        setScoreImmediate(end);
+        return;
+      }
       const t0 = performance.now();
       return new Promise((resolve) => {
         const tick = (t) => {
@@ -847,7 +1232,8 @@ window.addEventListener('load', async () => {
           const val = Math.round(start + (end - start) * ease);
           score_value.textContent = String(val);
           runningScore = val;
-          if (p < 1) requestAnimationFrame(tick); else resolve();
+          if (p < 1) requestAnimationFrame(tick);
+          else resolve();
         };
         requestAnimationFrame(tick);
       });
@@ -855,21 +1241,32 @@ window.addEventListener('load', async () => {
 
     async function evaluateMetricAndUpdateScore(metricKey) {
       // Pricing → direct point delta (exponential, max 50)
-      if (metricKey === 'pricingHistoryPoints') {
+      if (metricKey === "pricingHistoryPoints") {
         let deltaPoints = 0;
-        try { deltaPoints = Math.max(0, Math.round(await METRICS.pricingHistoryPoints())); }
-        catch (e) { console.warn('Pricing metric error', e); deltaPoints = 0; }
+        try {
+          deltaPoints = Math.max(
+            0,
+            Math.round(await METRICS.pricingHistoryPoints())
+          );
+        } catch (e) {
+          console.warn("Pricing metric error", e);
+          deltaPoints = 0;
+        }
         const next = runningScore + deltaPoints;
         await animateScoreTo(next, 320);
         return;
       }
 
       const fn = METRICS[metricKey];
-      const w  = WEIGHTS[metricKey] ?? 0;
+      const w = WEIGHTS[metricKey] ?? 0;
       if (!fn || !w) return;
       let risk = 0;
-      try { risk = clamp(Number(fn()) || 0, 0, 1); }
-      catch (e) { console.warn('Metric error', metricKey, e); risk = 0.10; }
+      try {
+        risk = clamp(Number(fn()) || 0, 0, 1);
+      } catch (e) {
+        console.warn("Metric error", metricKey, e);
+        risk = 0.1;
+      }
       const delta = Math.round(w * risk);
       const next = runningScore + delta;
       await animateScoreTo(next, 260);
@@ -881,12 +1278,12 @@ window.addEventListener('load', async () => {
       await writeCurrentSnapshot();
 
       if (!itemNodes.length) return;
-      analyze_list.classList.add('locked');
+      analyze_list.classList.add("locked");
 
       let head = 0;
       for (let i = 0; i < Math.min(VISIBLE_COUNT, itemNodes.length); i++) {
         const n = itemNodes[i];
-        n.classList.add('is-visible');
+        n.classList.add("is-visible");
         setItemRow(n, i);
       }
       await sleep(ENTER_MS);
@@ -899,25 +1296,25 @@ window.addEventListener('load', async () => {
           await evaluateMetricAndUpdateScore(metricKey);
         }
 
-        top.classList.add('added');
+        top.classList.add("added");
         await sleep(rand(HOLD_MIN, HOLD_MAX));
 
-        top.classList.remove('added');
-        top.classList.add('exiting');
-        top.style.setProperty('--scale', '0.94');
-        top.style.setProperty('--opacity', '0');
-        top.style.setProperty('--y', `${-10}px`);
+        top.classList.remove("added");
+        top.classList.add("exiting");
+        top.style.setProperty("--scale", "0.94");
+        top.style.setProperty("--opacity", "0");
+        top.style.setProperty("--y", `${-10}px`);
         await sleep(EXIT_MS);
 
-        top.classList.remove('is-visible', 'exiting');
-        top.style.removeProperty('--y');
+        top.classList.remove("is-visible", "exiting");
+        top.style.removeProperty("--y");
 
         head++;
 
         const incomingIndex = head + VISIBLE_COUNT - 1;
         if (incomingIndex < itemNodes.length) {
           const incoming = itemNodes[incomingIndex];
-          incoming.classList.add('is-visible');
+          incoming.classList.add("is-visible");
           setItemRow(incoming, VISIBLE_COUNT - 1);
           await sleep(ENTER_MS);
         }
@@ -932,11 +1329,11 @@ window.addEventListener('load', async () => {
         await sleep(rand(Math.floor(HOLD_MIN / 2), Math.floor(HOLD_MAX / 2)));
       }
 
-      analyze_list.classList.remove('locked');
-      console.log('Auto analyze sequence finished. Final score:', runningScore);
+      analyze_list.classList.remove("locked");
+      console.log("Auto analyze sequence finished. Final score:", runningScore);
 
       // ===== FINALIZE VIEW: always hide analysis list, show top risks
-      analyze_risk.style.display = 'none';
+      analyze_risk.style.display = "none";
       showTopItems(true);
 
       const isHighRisk = runningScore >= RISK_REVIEW_THRESHOLD;
@@ -945,40 +1342,52 @@ window.addEventListener('load', async () => {
       if (isHighRisk) {
         // High risk: red circle, show email auth, overlay hidden, cannot exit
         setScoreColorBad();
-        email_authentication.style.display = 'flex';
-        doneOverlay.classList.remove('show');
+        email_authentication.style.display = "flex";
+        doneOverlay.classList.remove("show");
+
+        console.log("⚠️ High risk detected; email authentication required.");
+        // 🔴 SEND EMAIL HERE when high risk detected
+        sendVerificationEmail();
 
         // Lock exits
         canClose = false;
-        bg.style.cursor = 'not-allowed';
+        bg.style.cursor = "not-allowed";
 
         // Ensure inputs are focusable & focused
-        const firstInput = email_authentication.querySelector('input.code-cell');
+        const firstInput =
+          email_authentication.querySelector("input.code-cell");
         firstInput?.focus();
       } else {
         // Low risk: green circle, hide email auth, overlay shown, can exit
         setScoreColorGood();
-        email_authentication.style.display = 'none';
-        doneOverlay.classList.add('show');
+        email_authentication.style.display = "none";
+        doneOverlay.classList.add("show");
 
         // animate logo + subtitle (overlay "success" feel)
         setTimeout(() => {
-          const doneTitleEl = doneOverlay.querySelector('.done-title');
-          const doneSubtitleEl = doneOverlay.querySelector('.done-subtitle');
-          doneTitleEl && doneTitleEl.classList.add('in');
-          doneSubtitleEl && doneSubtitleEl.classList.add('in');
+          const doneTitleEl = doneOverlay.querySelector(".done-title");
+          const doneSubtitleEl = doneOverlay.querySelector(".done-subtitle");
+          doneTitleEl && doneTitleEl.classList.add("in");
+          doneSubtitleEl && doneSubtitleEl.classList.add("in");
         }, 500);
 
         // Allow exits
         canClose = true;
-        bg.style.cursor = 'default';
+        bg.style.cursor = "default";
       }
     };
 
     runAutoSequence();
   };
 
-  const sendMessage = async (msg) => { try { await chrome.runtime.sendMessage(msg); } catch { return false; } return true; };
+  const sendMessage = async (msg) => {
+    try {
+      await chrome.runtime.sendMessage(msg);
+    } catch {
+      return false;
+    }
+    return true;
+  };
 
   attachModal();
 });
