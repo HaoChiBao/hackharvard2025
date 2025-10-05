@@ -424,6 +424,11 @@ window.addEventListener("load", async () => {
     const modal = document.createElement("modal-component");
 
     const title = document.createElement("h2");
+    const title_img = document.createElement("img");
+    title_img.className = "title-img";
+    title_img.src = await chrome.runtime.getURL("assets/images/verify-title.png");
+
+    title.appendChild(title_img);
 
     const container = document.createElement("div");
     container.className = "container";

@@ -39,8 +39,12 @@ modal-component {
   justify-content: center;
   align-items: start;
   flex-direction: column;
-  gap: 16px;
+  /* gap: 16px; */
   overflow: hidden; /* hide overlay edges if any animation */
+}
+
+modal-component .title img{
+    height: 50px;
 }
 
 /* INNER CONTAINER */
