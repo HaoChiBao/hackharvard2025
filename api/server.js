@@ -32,23 +32,18 @@ app.use(helmet({
   },
 }));
 
-// CORS configuration for Chrome extensions and web apps
+// CORS configuration for B2B integrations
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman, Chrome extensions)
+    // Allow requests with no origin (like mobile apps, Postman, server-to-server)
     if (!origin) return callback(null, true);
-    
-    // Allow Chrome extension origins (chrome-extension://)
-    if (origin.startsWith('chrome-extension://')) {
-      return callback(null, true);
-    }
     
     // Allow localhost for development
     if (origin.startsWith('http://localhost:') || origin.startsWith('https://localhost:')) {
       return callback(null, true);
     }
     
-    // Allow specific origins from environment
+    // Allow specific merchant domains from environment
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -69,11 +64,11 @@ app.use(cors({
 // Cookie parser middleware
 app.use(cookieParser());
 
-// Rate limiting
+// Rate limiting for B2B usage
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  max: 10000, // Higher limit for B2B usage
+  message: 'Rate limit exceeded. Please contact support for higher limits.'
 });
 app.use('/api/', limiter);
 
@@ -115,11 +110,12 @@ app.use('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Visa Fraud Detection API running on port ${PORT}`);
-  console.log(`📊 Dashboard: http://localhost:${PORT}/api/dashboard`);
+  console.log(`🚀 Fraud Detection API running on port ${PORT}`);
+  console.log(`📊 Dashboard: http://localhost:${PORT}/demo/dashboard.html`);
   console.log(`🔍 Health check: http://localhost:${PORT}/health`);
   console.log(`🛒 Demo: http://localhost:${PORT}/demo/checkout.html`);
-  console.log(`🔌 Chrome Extension API: http://localhost:${PORT}/api/fraud/analyze`);
+  console.log(`🔌 API Endpoint: http://localhost:${PORT}/api/fraud/analyze`);
+  console.log(`📋 Documentation: http://localhost:${PORT}/api/dashboard`);
 });
 
 module.exports = app;

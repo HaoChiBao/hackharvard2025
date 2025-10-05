@@ -94,6 +94,9 @@ class FraudDetector {
 
     const { latitude, longitude, accuracy, timestamp } = locationData;
     
+    // Get city and country information
+    const locationInfo = await this.getLocationInfo(latitude, longitude);
+    
     // Check if location is suspicious
     const isHighRiskCountry = this.isHighRiskCountry(latitude, longitude);
     const isVPN = await this.detectVPN(locationData);
@@ -117,7 +120,15 @@ class FraudDetector {
     return {
       score: Math.min(score, 1.0),
       reason: this.getLocationReason(isHighRiskCountry, isVPN, isVelocityAnomaly),
-      details: { isHighRiskCountry, isVPN, isVelocityAnomaly, accuracy }
+      details: { 
+        isHighRiskCountry, 
+        isVPN, 
+        isVelocityAnomaly, 
+        accuracy,
+        city: locationInfo.city,
+        country: locationInfo.country,
+        countryCode: locationInfo.countryCode
+      }
     };
   }
 
@@ -139,20 +150,20 @@ class FraudDetector {
 
     // Check for headless browser indicators
     if (this.isHeadlessBrowser(userAgent, deviceFingerprint)) {
-      score += 0.5;
+      score += 0.7; // Increased to 0.7 for HIGH risk
       flags.push('headless_browser');
     }
 
     // Check if device is known
     const isKnownDevice = await this.isKnownDevice(deviceFingerprint, customerId);
     if (!isKnownDevice) {
-      score += 0.3;
+      score += 0.4; // Increased to 0.4
       flags.push('unknown_device');
     }
 
     // Check for suspicious configurations
     if (this.isSuspiciousConfiguration(deviceFingerprint)) {
-      score += 0.2;
+      score += 0.3; // Increased to 0.3
       flags.push('suspicious_config');
     }
 
@@ -182,28 +193,28 @@ class FraudDetector {
 
     // Check for automation patterns
     if (this.isAutomatedBehavior(behaviorData)) {
-      score += 0.4;
+      score += 0.8; // Increased to 0.8 for HIGH risk
       flags.push('automated_behavior');
     }
 
     // Check typing patterns
     if (this.isSuspiciousTyping(typingPatterns)) {
-      score += 0.3;
+      score += 0.5; // Increased to 0.5
       flags.push('suspicious_typing');
     }
 
-    // Check action velocity
-    if (actionsPerMinute > 100) {
-      score += 0.2;
+    // Check action velocity - more aggressive thresholds
+    if (actionsPerMinute > 50) { // Lowered from 100
+      score += 0.4; // Increased to 0.4
       flags.push('too_fast');
-    } else if (actionsPerMinute < 2) {
-      score += 0.1;
+    } else if (actionsPerMinute < 5) { // Increased from 2
+      score += 0.3; // Increased to 0.3
       flags.push('too_slow');
     }
 
     // Check for human-like patterns
     if (!this.isHumanLikeBehavior(behaviorData)) {
-      score += 0.2;
+      score += 0.5; // Increased to 0.5
       flags.push('non_human_behavior');
     }
 
@@ -318,13 +329,14 @@ class FraudDetector {
   }
 
   calculateRiskScore(riskFactors) {
+    // More aggressive weighting for high-risk factors
     const weights = {
       location: 0.20,
-      device: 0.20,
-      behavior: 0.20,
-      network: 0.15,
-      timing: 0.10,
-      amount: 0.15
+      device: 0.30,    // Increased weight for device
+      behavior: 0.30,  // Increased weight for behavior
+      network: 0.10,
+      timing: 0.05,
+      amount: 0.05     // Reduced weight for amount
     };
 
     let totalScore = 0;
@@ -337,14 +349,22 @@ class FraudDetector {
       }
     });
 
-    return totalWeight > 0 ? totalScore / totalWeight : 0.5;
+    // Boost score if multiple high-risk factors are present
+    const highRiskFactors = Object.values(riskFactors).filter(factor => 
+      factor && factor.score > 0.7
+    ).length;
+    
+    if (highRiskFactors >= 2) {
+      totalScore += 0.2; // Boost by 20% if multiple high-risk factors
+    }
+
+    return Math.min(totalWeight > 0 ? totalScore / totalWeight : 0.5, 1.0);
   }
 
   getRiskLevel(score) {
-    if (score < 0.3) return 'LOW';
-    if (score < 0.6) return 'MEDIUM';
-    if (score < 0.8) return 'HIGH';
-    return 'CRITICAL';
+    if (score < 0.4) return 'LOW';
+    if (score < 0.7) return 'MEDIUM';
+    return 'HIGH';
   }
 
   getRecommendations(score, riskFactors) {
@@ -442,6 +462,12 @@ class FraudDetector {
 
   isKnownDevice(fingerprint, customerId) {
     // In production, check against database
+    // For demo: headless browsers and bots are always unknown
+    if (fingerprint.userAgent.includes('HeadlessChrome') || 
+        fingerprint.userAgent.includes('Bot') ||
+        fingerprint.webdriver === true) {
+      return false;
+    }
     return Math.random() > 0.3; // 70% chance device is known
   }
 
@@ -452,12 +478,14 @@ class FraudDetector {
   }
 
   isAutomatedBehavior(behaviorData) {
-    const { clicks, keystrokes, sessionDuration } = behaviorData;
+    const { clicks, keystrokes, sessionDuration, mouseMovements, scrolls } = behaviorData;
     const actionsPerMinute = (clicks + keystrokes) / (sessionDuration / 60000);
     
-    return actionsPerMinute > 100 || // Too fast
-           clicks === 0 || // No clicks
-           keystrokes === 0; // No keystrokes
+    // More aggressive automated behavior detection
+    return actionsPerMinute > 50 || // Too fast (lowered threshold)
+           (clicks === 0 && keystrokes === 0) || // No interaction at all
+           (clicks === 0 && mouseMovements === 0) || // No mouse activity
+           (sessionDuration < 2000 && clicks === 0); // Very short session with no clicks
   }
 
   isSuspiciousTyping(typingPatterns) {
@@ -521,6 +549,60 @@ class FraudDetector {
 
   generateTransactionId() {
     return 'txn_' + crypto.randomBytes(16).toString('hex');
+  }
+
+  async getLocationInfo(latitude, longitude) {
+    // In production, you would use a real geocoding service like Google Maps API
+    // For demo purposes, we'll simulate location data based on coordinates
+    
+    const mockLocations = [
+      { lat: 40.7128, lng: -74.0060, city: 'New York', country: 'United States', countryCode: 'US' },
+      { lat: 34.0522, lng: -118.2437, city: 'Los Angeles', country: 'United States', countryCode: 'US' },
+      { lat: 51.5074, lng: -0.1278, city: 'London', country: 'United Kingdom', countryCode: 'GB' },
+      { lat: 48.8566, lng: 2.3522, city: 'Paris', country: 'France', countryCode: 'FR' },
+      { lat: 35.6762, lng: 139.6503, city: 'Tokyo', country: 'Japan', countryCode: 'JP' },
+      { lat: 55.7558, lng: 37.6176, city: 'Moscow', country: 'Russia', countryCode: 'RU' },
+      { lat: 39.9042, lng: 116.4074, city: 'Beijing', country: 'China', countryCode: 'CN' },
+      { lat: 19.4326, lng: -99.1332, city: 'Mexico City', country: 'Mexico', countryCode: 'MX' },
+      { lat: -33.8688, lng: 151.2093, city: 'Sydney', country: 'Australia', countryCode: 'AU' },
+      { lat: 43.6532, lng: -79.3832, city: 'Toronto', country: 'Canada', countryCode: 'CA' }
+    ];
+
+    // Find the closest mock location
+    let closestLocation = mockLocations[0];
+    let minDistance = this.calculateDistance(latitude, longitude, closestLocation.lat, closestLocation.lng);
+
+    for (const location of mockLocations) {
+      const distance = this.calculateDistance(latitude, longitude, location.lat, location.lng);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestLocation = location;
+      }
+    }
+
+    // Add some randomness for demo purposes
+    const randomVariations = [
+      { city: 'San Francisco', country: 'United States', countryCode: 'US' },
+      { city: 'Chicago', country: 'United States', countryCode: 'US' },
+      { city: 'Miami', country: 'United States', countryCode: 'US' },
+      { city: 'Berlin', country: 'Germany', countryCode: 'DE' },
+      { city: 'Madrid', country: 'Spain', countryCode: 'ES' },
+      { city: 'Rome', country: 'Italy', countryCode: 'IT' },
+      { city: 'Amsterdam', country: 'Netherlands', countryCode: 'NL' },
+      { city: 'Stockholm', country: 'Sweden', countryCode: 'SE' }
+    ];
+
+    // 20% chance to return a random location for demo variety
+    if (Math.random() < 0.2) {
+      const randomLocation = randomVariations[Math.floor(Math.random() * randomVariations.length)];
+      return randomLocation;
+    }
+
+    return {
+      city: closestLocation.city,
+      country: closestLocation.country,
+      countryCode: closestLocation.countryCode
+    };
   }
 }
 
