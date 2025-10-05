@@ -209,6 +209,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return;
           }
 
+          console.log('Code:', code);
+
           const emailHTML = `
         <!DOCTYPE html>
         <html>
