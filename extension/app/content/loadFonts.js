@@ -39,7 +39,7 @@ async function injectMyriadProFonts() {
 
   const rules = await Promise.all(
     fonts.map(async ({ weight, style, file, stretch }) => {
-      const url = await chrome.runtime.getURL(`assets/fonts/${file}`);
+      const url = await chrome.runtime.getURL(`assets/fonts/Myriad/${file}`);
       return `
 @font-face {
   font-family: 'Myriad Pro';
